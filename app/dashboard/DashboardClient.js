@@ -89,7 +89,7 @@ function Ringkasan({ curMonth, setCurMonth }) {
       );
 
       return {
-        bulan: `${labelBulan(mk).slice(0, 3)}|${mk.slice(0, 4)}`,
+        bulan: labelBulan(mk).slice(0, 3),
         Pemasukan: rows
           .filter((t) => t.jenis === "pemasukan")
           .reduce((s, t) => s + t.jumlah, 0),
@@ -203,7 +203,6 @@ function Ringkasan({ curMonth, setCurMonth }) {
           <div className="panel-title">
             Tren 6 bulan terakhir
           </div>
-
           <ResponsiveContainer width="100%" height={260}>
             <ComposedChart
               data={trend}
@@ -218,33 +217,12 @@ function Ringkasan({ curMonth, setCurMonth }) {
                 stroke="#E4E4E4"
                 vertical={false}
               />
-
               <XAxis
-                dataKey="bulan"
-                tick={({ x, y, payload }) => {
-                  const [bulan, tahun] =
-                    payload.value.split("|");
-
-                  return (
-                    <text
-                      x={x}
-                      y={y + 10}
-                      textAnchor="middle"
-                      fontSize={12}
-                    >
-                      <tspan x={x} dy="0">
-                        {bulan}
-                      </tspan>
-                      <tspan x={x} dy="14">
-                        {tahun}
-                      </tspan>
-                    </text>
-                  );
-                }}
-                axisLine={{ stroke: "#B8B8B8" }}
-                tickLine={false}
+                  dataKey="bulan"     
+                  tick={{ fontSize: 12 }}
+                  axisLine={{ stroke: "#B8B8B8" }} 
+                  tickLine={false}
               />
-
               <YAxis
                 tickFormatter={(v) =>
                   v >= 1000000
