@@ -12,6 +12,7 @@ const BULAN_ID = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agus
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const monthKey = (d) => (d || "").slice(0, 7);
+const monthKeyOf = (tanggal) => (tanggal || "").slice(0, 7);
 const rupiah = (n) => "Rp" + Math.round(n || 0).toLocaleString("id-ID");
 const labelBulan = (key) => { const [y, m] = key.split("-"); return `${BULAN_ID[parseInt(m, 10) - 1]} ${y}`; };
 
@@ -51,82 +52,230 @@ function MonthNav({ value, onChange, disableNext }) {
 }
 
 // ---------------------------------------------------------------------------
+
 function Ringkasan({ curMonth, setCurMonth }) {
   const [transaksi, setTransaksi] = useState([]);
-  const [trend, setTrend] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    api(`/api/transactions?bulan=${curMonth}`).then((d) => setTransaksi(d.transaksi)).finally(() => setLoading(false));
+
+    api("/api/transactions")
+      .then((d) => setTransaksi(d.transaksi))
+      .finally(() => setLoading(false));
   }, [curMonth]);
 
-  useEffect(() => {
+  const transaksiBulanIni = useMemo(() => {
+    return transaksi.filter(
+      (t) => monthKeyOf(t.tanggal) === curMonth
+    );
+  }, [transaksi, curMonth]);
+
+  const trend = useMemo(() => {
     const months = [];
     const [y, m] = curMonth.split("-").map(Number);
+
     for (let i = 5; i >= 0; i--) {
       const d = new Date(y, m - 1 - i, 1);
-      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
-    }
-    Promise.all(months.map((mk) => api(`/api/transactions?bulan=${mk}`).then((d) => ({ mk, rows: d.transaksi })))).then((results) => {
-      setTrend(results.map(({ mk, rows }) => ({
-        bulan: labelBulan(mk).slice(0, 3),
-        Pemasukan: rows.filter((t) => t.jenis === "pemasukan").reduce((s, t) => s + t.jumlah, 0),
-        Pengeluaran: rows.filter((t) => t.jenis === "pengeluaran").reduce((s, t) => s + t.jumlah, 0),
-      })));
-    });
-  }, [curMonth]);
 
-  const totalMasuk = transaksi.filter((t) => t.jenis === "pemasukan").reduce((s, t) => s + t.jumlah, 0);
-  const totalKeluar = transaksi.filter((t) => t.jenis === "pengeluaran").reduce((s, t) => s + t.jumlah, 0);
+      months.push(
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+      );
+    }
+
+    return months.map((mk) => {
+      const rows = transaksi.filter(
+        (t) => monthKeyOf(t.tanggal) === mk
+      );
+
+      return {
+        bulan: `${labelBulan(mk).slice(0, 3)}|${mk.slice(0, 4)}`,
+        Pemasukan: rows
+          .filter((t) => t.jenis === "pemasukan")
+          .reduce((s, t) => s + t.jumlah, 0),
+        Pengeluaran: rows
+          .filter((t) => t.jenis === "pengeluaran")
+          .reduce((s, t) => s + t.jumlah, 0),
+      };
+    });
+  }, [transaksi, curMonth]);
+
+  const totalMasuk = transaksiBulanIni
+    .filter((t) => t.jenis === "pemasukan")
+    .reduce((s, t) => s + t.jumlah, 0);
+
+  const totalKeluar = transaksiBulanIni
+    .filter((t) => t.jenis === "pengeluaran")
+    .reduce((s, t) => s + t.jumlah, 0);
 
   const pieData = useMemo(() => {
     const map = {};
-    transaksi.filter((t) => t.jenis === "pengeluaran").forEach((t) => { map[t.kategori] = (map[t.kategori] || 0) + t.jumlah; });
-    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
-  }, [transaksi]);
 
-  const isCurrentOrFuture = curMonth >= monthKey(todayStr());
+    transaksiBulanIni
+      .filter((t) => t.jenis === "pengeluaran")
+      .forEach((t) => {
+        map[t.kategori] =
+          (map[t.kategori] || 0) + t.jumlah;
+      });
+
+    return Object.entries(map)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [transaksiBulanIni]);
+
+  const isCurrentOrFuture =
+    curMonth >= monthKey(todayStr());
 
   return (
     <div className="page">
       <div className="page-head">
         <h2>Ringkasan</h2>
-        <MonthNav value={curMonth} onChange={setCurMonth} disableNext={isCurrentOrFuture} />
+        <MonthNav
+          value={curMonth}
+          onChange={setCurMonth}
+          disableNext={isCurrentOrFuture}
+        />
       </div>
+
       <div className="stat-row">
-        <StatCard label="Pemasukan" value={totalMasuk} tone="blue" />
-        <StatCard label="Pengeluaran" value={totalKeluar} tone="brick" />
-        <StatCard label="Saldo bersih" value={totalMasuk - totalKeluar} tone="green" />
+        <StatCard
+          label="Pemasukan"
+          value={totalMasuk}
+          tone="blue"
+        />
+
+        <StatCard
+          label="Pengeluaran"
+          value={totalKeluar}
+          tone="brick"
+        />
+
+        <StatCard
+          label="Saldo bersih"
+          value={totalMasuk - totalKeluar}
+          tone="green"
+        />
       </div>
+
       <div className="panel-row">
         <div className="panel">
-          <div className="panel-title">Pengeluaran per kategori</div>
+          <div className="panel-title">
+            Pengeluaran per kategori
+          </div>
+
           {loading ? null : pieData.length === 0 ? (
-            <div className="empty-mini">Belum ada pengeluaran bulan ini.</div>
+            <div className="empty-mini">
+              Belum ada pengeluaran bulan ini.
+            </div>
           ) : (
             <ResponsiveContainer width="100%" height={260}>
               <PieChart>
-                <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90} paddingAngle={1}>
-                  {pieData.map((_, i) => <Cell key={i} fill={PALET[i % PALET.length]} />)}
+                <Pie
+                  data={pieData}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={55}
+                  outerRadius={90}
+                  paddingAngle={1}
+                >
+                  {pieData.map((_, i) => (
+                    <Cell
+                      key={i}
+                      fill={PALET[i % PALET.length]}
+                    />
+                  ))}
                 </Pie>
+
                 <Tooltip formatter={(v) => rupiah(v)} />
-                <Legend layout="vertical" align="right" verticalAlign="middle" wrapperStyle={{ fontSize: 12 }} />
+
+                <Legend
+                  layout="vertical"
+                  align="right"
+                  verticalAlign="middle"
+                  wrapperStyle={{ fontSize: 12 }}
+                />
               </PieChart>
             </ResponsiveContainer>
           )}
         </div>
+
         <div className="panel">
-          <div className="panel-title">Tren 6 bulan terakhir</div>
+          <div className="panel-title">
+            Tren 6 bulan terakhir
+          </div>
+
           <ResponsiveContainer width="100%" height={260}>
-            <ComposedChart data={trend} margin={{ left: 10 }}>
-              <CartesianGrid stroke="#E4E4E4" vertical={false} />
-              <XAxis dataKey="bulan" tick={{ fontSize: 12 }} axisLine={{ stroke: "#B8B8B8" }} tickLine={false} />
-              <YAxis tickFormatter={(v) => (v >= 1000000 ? `${v / 1000000}jt` : v)} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={44} />
+            <ComposedChart
+              data={trend}
+              margin={{
+                top: 5,
+                right: 10,
+                bottom: 15,
+                left: 10,
+              }}
+            >
+              <CartesianGrid
+                stroke="#E4E4E4"
+                vertical={false}
+              />
+
+              <XAxis
+                dataKey="bulan"
+                tick={({ x, y, payload }) => {
+                  const [bulan, tahun] =
+                    payload.value.split("|");
+
+                  return (
+                    <text
+                      x={x}
+                      y={y + 10}
+                      textAnchor="middle"
+                      fontSize={12}
+                    >
+                      <tspan x={x} dy="0">
+                        {bulan}
+                      </tspan>
+                      <tspan x={x} dy="14">
+                        {tahun}
+                      </tspan>
+                    </text>
+                  );
+                }}
+                axisLine={{ stroke: "#B8B8B8" }}
+                tickLine={false}
+              />
+
+              <YAxis
+                tickFormatter={(v) =>
+                  v >= 1000000
+                    ? `${v / 1000000}jt`
+                    : v
+                }
+                tick={{ fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+                width={44}
+              />
+
               <Tooltip formatter={(v) => rupiah(v)} />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey="Pemasukan" fill={WARNA_PEMASUKAN} radius={[3, 3, 0, 0]} barSize={22} />
-              <Bar dataKey="Pengeluaran" fill={WARNA_PENGELUARAN} radius={[3, 3, 0, 0]} barSize={22} />
+
+              <Legend
+                wrapperStyle={{ fontSize: 12 }}
+              />
+
+              <Bar
+                dataKey="Pemasukan"
+                fill={WARNA_PEMASUKAN}
+                radius={[3, 3, 0, 0]}
+                barSize={22}
+              />
+
+              <Bar
+                dataKey="Pengeluaran"
+                fill={WARNA_PENGELUARAN}
+                radius={[3, 3, 0, 0]}
+                barSize={22}
+              />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -136,6 +285,7 @@ function Ringkasan({ curMonth, setCurMonth }) {
 }
 
 // ---------------------------------------------------------------------------
+
 function Transaksi({ kategoriMap }) {
   const [bulan, setBulan] = useState(monthKey(todayStr()));
   const [kategoriFilter, setKategoriFilter] = useState("Semua");
