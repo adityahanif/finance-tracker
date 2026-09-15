@@ -119,7 +119,7 @@ function Ringkasan({ curMonth, setCurMonth }) {
         <div className="panel">
           <div className="panel-title">Tren 6 bulan terakhir</div>
           <ResponsiveContainer width="100%" height={260}>
-            <ComposedChart data={trend} margin={{ left: -10 }}>
+            <ComposedChart data={trend} margin={{ left: 10 }}>
               <CartesianGrid stroke="#E4E4E4" vertical={false} />
               <XAxis dataKey="bulan" tick={{ fontSize: 12 }} axisLine={{ stroke: "#B8B8B8" }} tickLine={false} />
               <YAxis tickFormatter={(v) => (v >= 1000000 ? `${v / 1000000}jt` : v)} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={44} />
