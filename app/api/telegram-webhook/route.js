@@ -1,3 +1,5 @@
+// Kembali ke first commit
+
 import { NextResponse } from "next/server";
 import { parseFreeText } from "../../../lib/gemini";
 import {
