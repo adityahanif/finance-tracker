@@ -1,11 +1,9 @@
-// Kembali ke first commit
-
 import { NextResponse } from "next/server";
 import { parseFreeText } from "../../../lib/gemini";
 import {
   appendTransaction, updateTransactionById, deleteTransactionById,
   getAllTransactions, clearCachedAnalysis, monthKeyOf,
-  getCategories, getSetting,
+  getCategories, getSetting, findIdByPrefix,
 } from "../../../lib/sheets";
 import { kategoriValid } from "../../../lib/categories";
 import { randomUUID } from "crypto";
@@ -25,6 +23,19 @@ function rupiah(n) {
   return "Rp" + Math.round(n).toLocaleString("id-ID");
 }
 
+// Otorisasi: hanya username yang terdaftar di TELEGRAM_ALLOWED_USERNAMES yang
+// boleh pakai bot. Kalau env var ini kosong/tidak diisi, bot tetap terbuka
+// untuk siapa saja (supaya tidak tiba-tiba mengunci diri sendiri kalau lupa set).
+function isAuthorized(msg) {
+  const allowed = (process.env.TELEGRAM_ALLOWED_USERNAMES || "")
+    .split(",")
+    .map((u) => u.trim().toLowerCase())
+    .filter(Boolean);
+  if (allowed.length === 0) return true;
+  const username = (msg.from?.username || "").toLowerCase();
+  return username && allowed.includes(username);
+}
+
 async function handleRingkasan(chatId) {
   const bulan = new Date().toISOString().slice(0, 7);
   const semua = await getAllTransactions();
@@ -37,17 +48,25 @@ async function handleRingkasan(chatId) {
   );
 }
 
-async function handleHapus(chatId, id) {
-  if (!id) return sendMessage(chatId, "Format: /hapus [id]");
-  const ok = await deleteTransactionById(id);
-  await sendMessage(chatId, ok ? `Transaksi ${id} dihapus.` : `ID ${id} tidak ditemukan.`);
+async function handleHapus(chatId, idInput) {
+  if (!idInput) return sendMessage(chatId, "Format: /hapus [id]");
+  const fullId = await findIdByPrefix(idInput);
+  if (!fullId) {
+    return sendMessage(chatId, `ID "${idInput}" tidak ditemukan atau cocok dengan lebih dari satu transaksi. Cek ID lengkapnya di dashboard/tab Transaksi.`);
+  }
+  const ok = await deleteTransactionById(fullId);
+  await sendMessage(chatId, ok ? `Transaksi ${idInput} dihapus.` : `ID ${idInput} tidak ditemukan.`);
 }
 
 // Format: /edit <id> jumlah=20000 kategori=Transportasi deskripsi=ojek
 async function handleEdit(chatId, args) {
-  const [id, ...pairs] = args;
-  if (!id || pairs.length === 0) {
+  const [idInput, ...pairs] = args;
+  if (!idInput || pairs.length === 0) {
     return sendMessage(chatId, "Format: /edit [id] field=nilai (contoh: /edit ab12cd jumlah=20000 kategori=Transportasi)");
+  }
+  const fullId = await findIdByPrefix(idInput);
+  if (!fullId) {
+    return sendMessage(chatId, `ID "${idInput}" tidak ditemukan atau cocok dengan lebih dari satu transaksi.`);
   }
   const patch = {};
   for (const p of pairs) {
@@ -62,10 +81,10 @@ async function handleEdit(chatId, args) {
       return sendMessage(chatId, `Kategori "${patch.kategori}" tidak valid untuk jenis "${patch.jenis}".`);
     }
   }
-  const updated = await updateTransactionById(id, patch);
-  if (!updated) return sendMessage(chatId, `ID ${id} tidak ditemukan.`);
+  const updated = await updateTransactionById(fullId, patch);
+  if (!updated) return sendMessage(chatId, `ID ${idInput} tidak ditemukan.`);
   await clearCachedAnalysis(monthKeyOf(updated.tanggal));
-  await sendMessage(chatId, `Transaksi ${id} diperbarui.`);
+  await sendMessage(chatId, `Transaksi ${idInput} diperbarui.`);
 }
 
 async function handlePesanBebas(chatId, teks) {
@@ -79,7 +98,6 @@ async function handlePesanBebas(chatId, teks) {
     return sendMessage(chatId, "Gagal memproses pesan, coba lagi sebentar lagi.");
   }
 
-  // FR-7: jika AI gagal parsing, minta klarifikasi, jangan simpan sembarangan
   if (hasil.error || !hasil.transaksi || hasil.transaksi.length === 0) {
     return sendMessage(chatId, hasil.error || "Pesan kurang jelas. Sertakan jumlah dan keterangan transaksinya ya.");
   }
@@ -101,8 +119,10 @@ async function handlePesanBebas(chatId, teks) {
     };
     await appendTransaction(tx);
     await clearCachedAnalysis(monthKeyOf(tx.tanggal));
+    // ID pendek (8 karakter) ditampilkan untuk /edit & /hapus — cukup dicocokkan
+    // sebagai prefix, tidak perlu ID lengkap.
     ringkasanBaris.push(
-      `${jenis === "pemasukan" ? "+" : "-"}${rupiah(tx.jumlah)} — ${tx.kategori} (${tx.deskripsi}) [id:${tx.id.slice(0, 6)}]`
+      `${jenis === "pemasukan" ? "+" : "-"}${rupiah(tx.jumlah)} — ${tx.kategori} (${tx.deskripsi}) [id:${tx.id.slice(0, 8)}]`
     );
   }
   await sendMessage(chatId, `Tercatat:\n${ringkasanBaris.join("\n")}`);
@@ -120,6 +140,11 @@ export async function POST(req) {
 
   const chatId = msg.chat.id;
   const teks = msg.text.trim();
+
+  if (!isAuthorized(msg)) {
+    await sendMessage(chatId, "Bot ini privat dan tidak bisa diakses oleh akun ini.");
+    return NextResponse.json({ ok: true });
+  }
 
   try {
     if (teks.startsWith("/ringkasan")) {

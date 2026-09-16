@@ -51,209 +51,107 @@ function MonthNav({ value, onChange, disableNext }) {
   );
 }
 
-// ---------------------------------------------------------------------------
+// Legend donut chart: mendatar, dengan persentase, diletakkan di bawah chart.
+function PieLegend({ payload }) {
+  if (!payload || payload.length === 0) return null;
+  return (
+    <div className="pie-legend">
+      {payload.map((entry, i) => (
+        <span key={i} className="pie-legend-item">
+          <span className="pie-legend-dot" style={{ background: entry.color }} />
+          {entry.value} ({Math.round((entry.payload?.percent || 0) * 100)}%)
+        </span>
+      ))}
+    </div>
+  );
+}
 
+// ---------------------------------------------------------------------------
 function Ringkasan({ curMonth, setCurMonth }) {
   const [transaksi, setTransaksi] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-
-    api("/api/transactions")
-      .then((d) => setTransaksi(d.transaksi))
-      .finally(() => setLoading(false));
+    api("/api/transactions").then((d) => setTransaksi(d.transaksi)).finally(() => setLoading(false));
   }, [curMonth]);
 
   const transaksiBulanIni = useMemo(() => {
-    return transaksi.filter(
-      (t) => monthKeyOf(t.tanggal) === curMonth
-    );
+    return transaksi.filter((t) => monthKeyOf(t.tanggal) === curMonth);
   }, [transaksi, curMonth]);
 
   const trend = useMemo(() => {
     const months = [];
     const [y, m] = curMonth.split("-").map(Number);
-
     for (let i = 5; i >= 0; i--) {
       const d = new Date(y, m - 1 - i, 1);
-
-      months.push(
-        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
-      );
+      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
     }
-
     return months.map((mk) => {
-      const rows = transaksi.filter(
-        (t) => monthKeyOf(t.tanggal) === mk
-      );
-
+      const rows = transaksi.filter((t) => monthKeyOf(t.tanggal) === mk);
       return {
         bulan: labelBulan(mk).slice(0, 3),
-        Pemasukan: rows
-          .filter((t) => t.jenis === "pemasukan")
-          .reduce((s, t) => s + t.jumlah, 0),
-        Pengeluaran: rows
-          .filter((t) => t.jenis === "pengeluaran")
-          .reduce((s, t) => s + t.jumlah, 0),
+        Pemasukan: rows.filter((t) => t.jenis === "pemasukan").reduce((s, t) => s + t.jumlah, 0),
+        Pengeluaran: rows.filter((t) => t.jenis === "pengeluaran").reduce((s, t) => s + t.jumlah, 0),
       };
     });
   }, [transaksi, curMonth]);
 
-  const totalMasuk = transaksiBulanIni
-    .filter((t) => t.jenis === "pemasukan")
-    .reduce((s, t) => s + t.jumlah, 0);
-
-  const totalKeluar = transaksiBulanIni
-    .filter((t) => t.jenis === "pengeluaran")
-    .reduce((s, t) => s + t.jumlah, 0);
+  const totalMasuk = transaksiBulanIni.filter((t) => t.jenis === "pemasukan").reduce((s, t) => s + t.jumlah, 0);
+  const totalKeluar = transaksiBulanIni.filter((t) => t.jenis === "pengeluaran").reduce((s, t) => s + t.jumlah, 0);
 
   const pieData = useMemo(() => {
     const map = {};
-
-    transaksiBulanIni
-      .filter((t) => t.jenis === "pengeluaran")
-      .forEach((t) => {
-        map[t.kategori] =
-          (map[t.kategori] || 0) + t.jumlah;
-      });
-
-    return Object.entries(map)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
+    transaksiBulanIni.filter((t) => t.jenis === "pengeluaran").forEach((t) => {
+      map[t.kategori] = (map[t.kategori] || 0) + t.jumlah;
+    });
+    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
   }, [transaksiBulanIni]);
 
-  const isCurrentOrFuture =
-    curMonth >= monthKey(todayStr());
+  const isCurrentOrFuture = curMonth >= monthKey(todayStr());
 
   return (
     <div className="page">
       <div className="page-head">
         <h2>Ringkasan</h2>
-        <MonthNav
-          value={curMonth}
-          onChange={setCurMonth}
-          disableNext={isCurrentOrFuture}
-        />
+        <MonthNav value={curMonth} onChange={setCurMonth} disableNext={isCurrentOrFuture} />
       </div>
 
       <div className="stat-row">
-        <StatCard
-          label="Pemasukan"
-          value={totalMasuk}
-          tone="blue"
-        />
-
-        <StatCard
-          label="Pengeluaran"
-          value={totalKeluar}
-          tone="brick"
-        />
-
-        <StatCard
-          label="Saldo bersih"
-          value={totalMasuk - totalKeluar}
-          tone="green"
-        />
+        <StatCard label="Pemasukan" value={totalMasuk} tone="blue" />
+        <StatCard label="Pengeluaran" value={totalKeluar} tone="brick" />
+        <StatCard label="Saldo bersih" value={totalMasuk - totalKeluar} tone="green" />
       </div>
 
       <div className="panel-row">
         <div className="panel">
-          <div className="panel-title">
-            Pengeluaran per kategori
-          </div>
-
+          <div className="panel-title">Pengeluaran per kategori</div>
           {loading ? null : pieData.length === 0 ? (
-            <div className="empty-mini">
-              Belum ada pengeluaran bulan ini.
-            </div>
+            <div className="empty-mini">Belum ada pengeluaran bulan ini.</div>
           ) : (
-            <ResponsiveContainer width="100%" height={260}>
+            <ResponsiveContainer width="100%" height={300}>
               <PieChart>
-                <Pie
-                  data={pieData}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={55}
-                  outerRadius={90}
-                  paddingAngle={1}
-                >
-                  {pieData.map((_, i) => (
-                    <Cell
-                      key={i}
-                      fill={PALET[i % PALET.length]}
-                    />
-                  ))}
+                <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={48} outerRadius={78} paddingAngle={1}>
+                  {pieData.map((_, i) => <Cell key={i} fill={PALET[i % PALET.length]} />)}
                 </Pie>
-
                 <Tooltip formatter={(v) => rupiah(v)} />
-
-                <Legend
-                  layout="vertical"
-                  align="right"
-                  verticalAlign="middle"
-                  wrapperStyle={{ fontSize: 12 }}
-                />
+                <Legend content={<PieLegend />} verticalAlign="bottom" />
               </PieChart>
             </ResponsiveContainer>
           )}
         </div>
 
         <div className="panel">
-          <div className="panel-title">
-            Tren 6 bulan terakhir
-          </div>
+          <div className="panel-title">Tren 6 bulan terakhir</div>
           <ResponsiveContainer width="100%" height={260}>
-            <ComposedChart
-              data={trend}
-              margin={{
-                top: 5,
-                right: 10,
-                bottom: 15,
-                left: 10,
-              }}
-            >
-              <CartesianGrid
-                stroke="#E4E4E4"
-                vertical={false}
-              />
-              <XAxis
-                  dataKey="bulan"     
-                  tick={{ fontSize: 12 }}
-                  axisLine={{ stroke: "#B8B8B8" }} 
-                  tickLine={false}
-              />
-              <YAxis
-                tickFormatter={(v) =>
-                  v >= 1000000
-                    ? `${v / 1000000}jt`
-                    : v
-                }
-                tick={{ fontSize: 11 }}
-                axisLine={false}
-                tickLine={false}
-                width={44}
-              />
-
+            <ComposedChart data={trend} margin={{ top: 5, right: 10, bottom: 15, left: 10 }}>
+              <CartesianGrid stroke="#E4E4E4" vertical={false} />
+              <XAxis dataKey="bulan" tick={{ fontSize: 12 }} axisLine={{ stroke: "#B8B8B8" }} tickLine={false} />
+              <YAxis tickFormatter={(v) => (v >= 1000000 ? `${v / 1000000}jt` : v)} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={44} />
               <Tooltip formatter={(v) => rupiah(v)} />
-
-              <Legend
-                wrapperStyle={{ fontSize: 12 }}
-              />
-
-              <Bar
-                dataKey="Pemasukan"
-                fill={WARNA_PEMASUKAN}
-                radius={[3, 3, 0, 0]}
-                barSize={22}
-              />
-
-              <Bar
-                dataKey="Pengeluaran"
-                fill={WARNA_PENGELUARAN}
-                radius={[3, 3, 0, 0]}
-                barSize={22}
-              />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Bar dataKey="Pemasukan" fill={WARNA_PEMASUKAN} radius={[3, 3, 0, 0]} barSize={22} />
+              <Bar dataKey="Pengeluaran" fill={WARNA_PENGELUARAN} radius={[3, 3, 0, 0]} barSize={22} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -263,13 +161,13 @@ function Ringkasan({ curMonth, setCurMonth }) {
 }
 
 // ---------------------------------------------------------------------------
-
 function Transaksi({ kategoriMap }) {
   const [bulan, setBulan] = useState(monthKey(todayStr()));
   const [kategoriFilter, setKategoriFilter] = useState("Semua");
   const [transaksi, setTransaksi] = useState([]);
   const [editId, setEditId] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
+  const [hapusErr, setHapusErr] = useState("");
 
   const muat = useCallback(() => {
     api(`/api/transactions?bulan=${bulan}`).then((d) => setTransaksi(d.transaksi));
@@ -286,7 +184,15 @@ function Transaksi({ kategoriMap }) {
     await api(`/api/transactions/${editId}`, { method: "PATCH", body: JSON.stringify(editDraft) });
     setEditId(null); muat();
   };
-  const hapus = async (id) => { await api(`/api/transactions/${id}`, { method: "DELETE" }); muat(); };
+  const hapus = async (id) => {
+    setHapusErr("");
+    try {
+      await api(`/api/transactions/${id}`, { method: "DELETE" });
+      muat();
+    } catch (err) {
+      setHapusErr(err.message);
+    }
+  };
 
   return (
     <div className="page">
@@ -298,6 +204,9 @@ function Transaksi({ kategoriMap }) {
         </select>
         <span className="filter-count">{filtered.length} entri</span>
       </div>
+
+      {hapusErr && <div className="form-error" style={{ marginBottom: 8 }}>{hapusErr}</div>}
+
       <div className="table-wrap">
         {filtered.length === 0 ? (
           <div className="empty-mini">Tidak ada transaksi untuk filter ini.</div>
@@ -325,8 +234,8 @@ function Transaksi({ kategoriMap }) {
                   <td className="muted">{editDraft.sumber_input}</td>
                   <td><input type="number" value={editDraft.jumlah} onChange={(e) => setEditDraft({ ...editDraft, jumlah: Number(e.target.value) })} className="field sm num" /></td>
                   <td className="row-actions">
-                    <button onClick={saveEdit}>✓</button>
-                    <button onClick={() => setEditId(null)}>✕</button>
+                    <button type="button" onClick={saveEdit}>✓</button>
+                    <button type="button" onClick={() => setEditId(null)}>✕</button>
                   </td>
                 </tr>
               ) : (
@@ -338,8 +247,8 @@ function Transaksi({ kategoriMap }) {
                   <td className="muted">{t.sumber_input === "telegram" ? "Telegram" : t.sumber_input === "website_quick_add" ? "Tambah cepat" : "Form"}</td>
                   <td className={"num " + (t.jenis === "pemasukan" ? "text-blue" : "text-brick")}>{t.jenis === "pemasukan" ? "+" : "-"}{rupiah(t.jumlah)}</td>
                   <td className="row-actions">
-                    <button onClick={() => startEdit(t)}>✎</button>
-                    <button onClick={() => hapus(t.id)}>🗑</button>
+                    <button type="button" onClick={() => startEdit(t)}>✎</button>
+                    <button type="button" onClick={() => hapus(t.id)}>🗑</button>
                   </td>
                 </tr>
               ))}
@@ -491,21 +400,21 @@ function Pengaturan() {
   const [pinSaving, setPinSaving] = useState(false);
   const [pinMsg, setPinMsg] = useState("");
   const [pinErr, setPinErr] = useState("");
-  
+
   const gantiPin = async (e) => {
-	e.preventDefault();
-	setPinErr(""); setPinMsg("");
-	if (pinBaru !== pinBaru2) return setPinErr("Konfirmasi PIN baru tidak cocok.");
-	setPinSaving(true);
-	try {
-		await api("/api/settings/pin", { method: "POST", body: JSON.stringify({ pinLama, pinBaru }) });
-		setPinMsg("PIN berhasil diganti.");
-		setPinLama(""); setPinBaru(""); setPinBaru2("");
-	} catch (e2) {
-	  setPinErr(e2.message);
-	} finally {
-	  setPinSaving(false);
-	}
+    e.preventDefault();
+    setPinErr(""); setPinMsg("");
+    if (pinBaru !== pinBaru2) return setPinErr("Konfirmasi PIN baru tidak cocok.");
+    setPinSaving(true);
+    try {
+      await api("/api/settings/pin", { method: "POST", body: JSON.stringify({ pinLama, pinBaru }) });
+      setPinMsg("PIN berhasil diganti.");
+      setPinLama(""); setPinBaru(""); setPinBaru2("");
+    } catch (e2) {
+      setPinErr(e2.message);
+    } finally {
+      setPinSaving(false);
+    }
   };
 
   useEffect(() => {
@@ -531,7 +440,8 @@ function Pengaturan() {
   return (
     <div className="page">
       <div className="page-head"><h2>Pengaturan</h2></div>
-	    <div className="panel" style={{ maxWidth: 480 }}>
+
+      <div className="panel" style={{ maxWidth: 480 }}>
         <div className="panel-title">Ganti PIN</div>
         <form onSubmit={gantiPin} className="struct-form">
           <label>PIN lama
