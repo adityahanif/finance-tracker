@@ -485,6 +485,28 @@ function Pengaturan() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+  const [pinLama, setPinLama] = useState("");
+  const [pinBaru, setPinBaru] = useState("");
+  const [pinBaru2, setPinBaru2] = useState("");
+  const [pinSaving, setPinSaving] = useState(false);
+  const [pinMsg, setPinMsg] = useState("");
+  const [pinErr, setPinErr] = useState("");
+  
+  const gantiPin = async (e) => {
+	e.preventDefault();
+	setPinErr(""); setPinMsg("");
+	if (pinBaru !== pinBaru2) return setPinErr("Konfirmasi PIN baru tidak cocok.");
+	setPinSaving(true);
+	try {
+		await api("/api/settings/pin", { method: "POST", body: JSON.stringify({ pinLama, pinBaru }) });
+		setPinMsg("PIN berhasil diganti.");
+		setPinLama(""); setPinBaru(""); setPinBaru2("");
+	} catch (e2) {
+	  setPinErr(e2.message);
+	} finally {
+	  setPinSaving(false);
+	}
+  };
 
   useEffect(() => {
     api("/api/settings").then((d) => {
@@ -509,6 +531,24 @@ function Pengaturan() {
   return (
     <div className="page">
       <div className="page-head"><h2>Pengaturan</h2></div>
+	    <div className="panel" style={{ maxWidth: 480 }}>
+        <div className="panel-title">Ganti PIN</div>
+        <form onSubmit={gantiPin} className="struct-form">
+          <label>PIN lama
+            <input type="password" inputMode="numeric" value={pinLama} onChange={(e) => setPinLama(e.target.value.replace(/\D/g, ""))} className="field" />
+          </label>
+          <label>PIN baru
+            <input type="password" inputMode="numeric" value={pinBaru} onChange={(e) => setPinBaru(e.target.value.replace(/\D/g, ""))} className="field" />
+          </label>
+          <label>Konfirmasi PIN baru
+            <input type="password" inputMode="numeric" value={pinBaru2} onChange={(e) => setPinBaru2(e.target.value.replace(/\D/g, ""))} className="field" />
+          </label>
+          {pinErr && <div className="form-error">{pinErr}</div>}
+          {pinMsg && <div className="form-ok">{pinMsg}</div>}
+          <button type="submit" className="btn-primary" disabled={pinSaving}>{pinSaving ? "Menyimpan…" : "Ganti PIN"}</button>
+        </form>
+      </div>
+
       <div className="panel" style={{ maxWidth: 480 }}>
         <div className="panel-title">Model Gemini</div>
         <p className="panel-hint">Nama model harus sesuai yang tersedia untuk API key kamu (cek di Google AI Studio).</p>

@@ -40,6 +40,6 @@ export const config = {
     "/api/quick-add",
     "/api/analysis/:path*",
     "/api/categories",
-    "/api/settings",
+    "/api/settings/:path*",,
   ],
 };
