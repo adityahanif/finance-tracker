@@ -52,16 +52,20 @@ function MonthNav({ value, onChange, disableNext }) {
 }
 
 // Legend donut chart: mendatar, dengan persentase, diletakkan di bawah chart.
-function PieLegend({ payload }) {
+function PieLegend({ payload, total }) {
   if (!payload || payload.length === 0) return null;
   return (
     <div className="pie-legend">
-      {payload.map((entry, i) => (
-        <span key={i} className="pie-legend-item">
-          <span className="pie-legend-dot" style={{ background: entry.color }} />
-          {entry.value} ({Math.round((entry.payload?.percent || 0) * 100).toFixed(2)}%)
-        </span>
-      ))}
+      {payload.map((entry, i) => {
+        const value = entry.payload?.value ?? 0;
+        const persen = total > 0 ? (value / total) * 100 : 0;
+        return (
+          <span key={i} className="pie-legend-item">
+            <span className="pie-legend-dot" style={{ background: entry.color }} />
+            {entry.value} ({persen.toFixed(2)}%)
+          </span>
+        );
+      })}
     </div>
   );
 }
@@ -497,8 +501,8 @@ export default function DashboardClient() {
         <div className="brand">
           <div className="brand-mark"><img src="/logo.png"/></div>
           <div>
-            <div className="brand-title">Buku Kas</div>
-            <div className="brand-sub">Pencatat keuangan pribadi</div>
+            <div className="brand-title">Master of Coin</div>
+            <div className="brand-sub">Personal Finance Tracker</div>
           </div>
         </div>
         <nav className="tabs">
