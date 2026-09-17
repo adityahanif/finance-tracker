@@ -52,20 +52,16 @@ function MonthNav({ value, onChange, disableNext }) {
 }
 
 // Legend donut chart: mendatar, dengan persentase, diletakkan di bawah chart.
-function PieLegend({ payload, total }) {
-  if (!payload || payload.length === 0) return null;
+function PieLegend({ data }) {
+  if (!data || data.length === 0) return null;
   return (
     <div className="pie-legend">
-      {payload.map((entry, i) => {
-        const value = entry.payload?.value ?? 0;
-        const persen = total > 0 ? (value / total) * 100 : 0;
-        return (
-          <span key={i} className="pie-legend-item">
-            <span className="pie-legend-dot" style={{ background: entry.color }} />
-            {entry.value} ({persen.toFixed(2)}%)
-          </span>
-        );
-      })}
+      {data.map((entry, i) => (
+        <span key={i} className="pie-legend-item">
+          <span className="pie-legend-dot" style={{ background: PALET[i % PALET.length] }} />
+          {entry.name} ({entry.percent.toFixed(2)}%)
+        </span>
+      ))}
     </div>
   );
 }
@@ -103,13 +99,16 @@ function Ringkasan({ curMonth, setCurMonth }) {
 
   const totalMasuk = transaksiBulanIni.filter((t) => t.jenis === "pemasukan").reduce((s, t) => s + t.jumlah, 0);
   const totalKeluar = transaksiBulanIni.filter((t) => t.jenis === "pengeluaran").reduce((s, t) => s + t.jumlah, 0);
-
+  
   const pieData = useMemo(() => {
-    const map = {};
-    transaksiBulanIni.filter((t) => t.jenis === "pengeluaran").forEach((t) => {
-      map[t.kategori] = (map[t.kategori] || 0) + t.jumlah;
-    });
-    return Object.entries(map).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+  const map = {};
+  transaksiBulanIni.filter((t) => t.jenis === "pengeluaran").forEach((t) => {
+    map[t.kategori] = (map[t.kategori] || 0) + t.jumlah;
+  });
+  const total = Object.values(map).reduce((s, v) => s + v, 0);
+  return Object.entries(map)
+    .map(([name, value]) => ({ name, value, percent: total > 0 ? (value / total) * 100 : 0 }))
+    .sort((a, b) => b.value - a.value);
   }, [transaksiBulanIni]);
 
   const isCurrentOrFuture = curMonth >= monthKey(todayStr());
@@ -132,16 +131,16 @@ function Ringkasan({ curMonth, setCurMonth }) {
           <div className="panel-title">Pengeluaran per kategori</div>
           {loading ? null : pieData.length === 0 ? (
             <div className="empty-mini">Belum ada pengeluaran bulan ini.</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={300}>
+          ) : (			  
+			<ResponsiveContainer width="100%" height={280}>
               <PieChart>
                 <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={48} outerRadius={78} paddingAngle={1}>
                   {pieData.map((_, i) => <Cell key={i} fill={PALET[i % PALET.length]} />)}
                 </Pie>
                 <Tooltip formatter={(v) => rupiah(v)} />
-                <Legend content={<PieLegend />} verticalAlign="bottom" />
               </PieChart>
             </ResponsiveContainer>
+            <PieLegend data={pieData} />
           )}
         </div>
 
