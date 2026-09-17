@@ -4,7 +4,7 @@ export const metadata = {
   title: "Master of Coins",
   description: "Personal finance tracker via Telegram Bot + AI",
   icons: {
-    icon: "/favicon.png",
+    icon: "/logo.png",
   },
 };
 
