@@ -59,7 +59,7 @@ function PieLegend({ payload }) {
       {payload.map((entry, i) => (
         <span key={i} className="pie-legend-item">
           <span className="pie-legend-dot" style={{ background: entry.color }} />
-          {entry.value} ({Math.round((entry.payload?.percent || 0) * 100)}%)
+          {entry.value} ({Math.round((entry.payload?.percent || 0) * 100).toFixed(2)}%)
         </span>
       ))}
     </div>
@@ -495,7 +495,7 @@ export default function DashboardClient() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark"><img src="/logo-finance.png"/></div>
+          <div className="brand-mark"><img src="/logo.png"/></div>
           <div>
             <div className="brand-title">Buku Kas</div>
             <div className="brand-sub">Pencatat keuangan pribadi</div>
