@@ -131,7 +131,7 @@ function Ringkasan({ curMonth, setCurMonth }) {
           <div className="panel-title">Pengeluaran per kategori</div>
           {loading ? null : pieData.length === 0 ? (
             <div className="empty-mini">Belum ada pengeluaran bulan ini.</div>
-          ) : (			  
+          ) : (
 			<ResponsiveContainer width="100%" height={280}>
               <PieChart>
                 <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={48} outerRadius={78} paddingAngle={1}>
@@ -141,6 +141,7 @@ function Ringkasan({ curMonth, setCurMonth }) {
               </PieChart>
             </ResponsiveContainer>
             <PieLegend data={pieData} />
+            </>
           )}
         </div>
 
