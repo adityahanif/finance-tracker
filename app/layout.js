@@ -1,8 +1,11 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Buku Kas",
-  description: "Pencatat keuangan pribadi via Telegram Bot + AI",
+  title: "Master of Coins",
+  description: "Personal finance tracker via Telegram Bot + AI",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export const viewport = {

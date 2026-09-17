@@ -501,7 +501,7 @@ export default function DashboardClient() {
         <div className="brand">
           <div className="brand-mark"><img src="/logo.png"/></div>
           <div>
-            <div className="brand-title">Master of Coin</div>
+            <div className="brand-title">Master of Coins</div>
             <div className="brand-sub">Personal Finance Tracker</div>
           </div>
         </div>
