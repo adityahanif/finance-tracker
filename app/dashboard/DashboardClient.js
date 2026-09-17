@@ -495,7 +495,7 @@ export default function DashboardClient() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">Rp</div>
+          <div className="brand-mark"><img src="/logo-finance.png"/></div>
           <div>
             <div className="brand-title">Buku Kas</div>
             <div className="brand-sub">Pencatat keuangan pribadi</div>
