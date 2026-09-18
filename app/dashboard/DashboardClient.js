@@ -377,7 +377,6 @@ function AnalisisAI({ curMonth }) {
       <div className="panel analysis-panel">
         {loading ? null : teks ? (
           <>
-            <p className="analysis-text">{teks}</p>
 			<div className="analysis-text">
 				<ReactMarkdown>{teks}</ReactMarkdown>
 			</div>
