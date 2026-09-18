@@ -118,7 +118,13 @@ button, input, select, textarea { font-family: var(--font); }
 .form-error { color: var(--brick); font-size: 12.5px; margin-top: 4px; }
 .form-ok { color: var(--green); font-size: 12.5px; margin-top: 4px; }
 .analysis-panel { max-width: 640px; }
-.analysis-text { font-size: 14.5px; line-height: 1.7; white-space: pre-wrap; }
+.analysis-text { font-size: 14.5px; line-height: 1.7; }
+.analysis-text h1, .analysis-text h2, .analysis-text h3 { font-size: 15.5px; font-weight: 700; margin: 14px 0 6px; }
+.analysis-text h1:first-child, .analysis-text h2:first-child, .analysis-text h3:first-child { margin-top: 0; }
+.analysis-text p { margin: 0 0 10px; }
+.analysis-text ul, .analysis-text ol { margin: 0 0 10px; padding-left: 20px; }
+.analysis-text li { margin-bottom: 4px; }
+.analysis-text strong { font-weight: 700; }
 
 /* Login */
 .pin-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #fff; padding: 20px; }

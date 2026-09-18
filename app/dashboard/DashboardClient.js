@@ -1,3 +1,4 @@
+import ReactMarkdown from "react-markdown";
 "use client";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
@@ -377,6 +378,9 @@ function AnalisisAI({ curMonth }) {
         {loading ? null : teks ? (
           <>
             <p className="analysis-text">{teks}</p>
+			<div className="analysis-text">
+				<ReactMarkdown>{teks}</ReactMarkdown>
+			</div>
             <button className="btn-secondary" onClick={jalankan}>Buat ulang analisis</button>
           </>
         ) : (
