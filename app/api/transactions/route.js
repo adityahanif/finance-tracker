@@ -5,11 +5,28 @@ import { randomUUID } from "crypto";
 
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
-  const bulan = searchParams.get("bulan"); // format YYYY-MM, opsional
+  const bulan = searchParams.get("bulan"); // format YYYY-MM, opsional (single)
+  const monthsParam = searchParams.get("months"); // format "YYYY-MM,YYYY-MM,...", opsional
+  const from = searchParams.get("from"); // format YYYY-MM, opsional (inklusif)
+  const to = searchParams.get("to"); // format YYYY-MM, opsional (inklusif)
 
   try {
     let data = await getAllTransactions();
-    if (bulan) data = data.filter((t) => monthKeyOf(t.tanggal) === bulan);
+    if (monthsParam) {
+      const set = new Set(
+        monthsParam.split(",").map((s) => s.trim()).filter(Boolean)
+      );
+      data = data.filter((t) => set.has(monthKeyOf(t.tanggal)));
+    } else if (from || to) {
+      data = data.filter((t) => {
+        const mk = monthKeyOf(t.tanggal);
+        if (from && mk < from) return false;
+        if (to && mk > to) return false;
+        return true;
+      });
+    } else if (bulan) {
+      data = data.filter((t) => monthKeyOf(t.tanggal) === bulan);
+    }
     data.sort((a, b) => (a.tanggal < b.tanggal ? 1 : -1));
     return NextResponse.json({ transaksi: data });
   } catch (err) {

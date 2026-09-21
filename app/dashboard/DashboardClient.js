@@ -70,24 +70,37 @@ function PieLegend({ data }) {
 function Ringkasan({ curMonth, setCurMonth }) {
   const [transaksi, setTransaksi] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadErr, setLoadErr] = useState("");
 
-  useEffect(() => {
-    setLoading(true);
-    api("/api/transactions").then((d) => setTransaksi(d.transaksi)).finally(() => setLoading(false));
-  }, []);
-
-  const transaksiBulanIni = useMemo(() => {
-    return transaksi.filter((t) => monthKeyOf(t.tanggal) === curMonth);
-  }, [transaksi, curMonth]);
-
-  const trend = useMemo(() => {
+  // Hanya fetch jendela 6 bulan yang dibutuhkan tren + bulan aktif,
+  // bukan seluruh riwayat (hemat transfer untuk data >ribuan baris).
+  const windowMonths = useMemo(() => {
     const months = [];
     const [y, m] = curMonth.split("-").map(Number);
     for (let i = 5; i >= 0; i--) {
       const d = new Date(y, m - 1 - i, 1);
       months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
     }
-    return months.map((mk) => {
+    return months;
+  }, [curMonth]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setLoadErr("");
+    api(`/api/transactions?months=${windowMonths.join(",")}`)
+      .then((d) => { if (!cancelled) setTransaksi(d.transaksi || []); })
+      .catch((e) => { if (!cancelled) setLoadErr(e.message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [windowMonths]);
+
+  const transaksiBulanIni = useMemo(() => {
+    return transaksi.filter((t) => monthKeyOf(t.tanggal) === curMonth);
+  }, [transaksi, curMonth]);
+
+  const trend = useMemo(() => {
+    return windowMonths.map((mk) => {
       const rows = transaksi.filter((t) => monthKeyOf(t.tanggal) === mk);
       return {
         bulan: labelBulan(mk).slice(0, 3),
@@ -95,7 +108,7 @@ function Ringkasan({ curMonth, setCurMonth }) {
         Pengeluaran: rows.filter((t) => t.jenis === "pengeluaran").reduce((s, t) => s + t.jumlah, 0),
       };
     });
-  }, [transaksi, curMonth]);
+  }, [transaksi, windowMonths]);
 
   const totalMasuk = transaksiBulanIni.filter((t) => t.jenis === "pemasukan").reduce((s, t) => s + t.jumlah, 0);
   const totalKeluar = transaksiBulanIni.filter((t) => t.jenis === "pengeluaran").reduce((s, t) => s + t.jumlah, 0);
@@ -119,6 +132,8 @@ function Ringkasan({ curMonth, setCurMonth }) {
         <h2>Ringkasan</h2>
         <MonthNav value={curMonth} onChange={setCurMonth} disableNext={isCurrentOrFuture} />
       </div>
+
+      {loadErr && <div className="form-error" style={{ marginBottom: 12 }}>{loadErr}</div>}
 
       <div className="stat-row">
         <StatCard label="Pemasukan" value={totalMasuk} tone="blue" />

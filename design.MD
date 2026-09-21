@@ -42,7 +42,7 @@
                        ▼
 ┌────────┐   ┌─────────────────────────┐   ┌──────────────┐   ┌─────────┐
 │ Browser│──▶│ Next.js (Vercel)        │──▶│ Google Sheets│──▶│ Gemini  │
-│ Dashboard│ │ app/api/* + middleware  │◀──│ (4 tab)      │   │ API     │
+│ Dashboard│ │ app/api/* + proxy      │◀──│ (4 tab)      │   │ API     │
 └────────┘   └─────────────────────────┘   └──────────────┘   └─────────┘
 ```
 
@@ -72,7 +72,7 @@ lib/
   auth.js       → create/verify JWT, checkPin(), changePin(), scrypt hashing
   categories.js → fallback statis + kategoriValid()
   constants.js  → SESSION_COOKIE = "fintrack_session"
-middleware.js   → guard /dashboard + API privat (kecuali webhook & auth)
+proxy.js          → guard /dashboard + API privat (kecuali webhook & auth)
 scripts/set-webhook.js → daftarkan webhook Telegram ke URL Vercel
 ```
 
@@ -124,7 +124,7 @@ Semua response JSON. Error: `{ error: "pesan Bahasa Indonesia" }`.
 |---|---|---|---|---|
 | `POST /api/auth` | tidak | `{ pin }` | `200 { ok:true }` + set cookie | Gagal → 401 pesan generik (tanpa sisa percobaan) |
 | `POST /api/telegram-webhook` | `x-telegram-bot-api-secret-token` == `TELEGRAM_WEBHOOK_SECRET` | Update Telegram | `{ ok:true }` | Selalu 200 ke Telegram kecuali secret salah (401); error bisnis dibalas sebagai chat |
-| `GET /api/transactions?bulan=YYYY-MM` | PIN | query opsional | `{ transaksi: [] }` desc by tanggal | `middleware.js:37-44` |
+| `GET /api/transactions?bulan=YYYY-MM` | PIN | query opsional (`bulan` / `months` / `from`+`to`) | `{ transaksi: [] }` desc by tanggal | `proxy.js` |
 | `POST /api/transactions` | PIN | `{ tanggal, jenis, jumlah, kategori, deskripsi }` | `201 { transaksi }` | Validasi FR-20; tanpa AI |
 | `PATCH /api/transactions/[id]` | PIN | partial `{ tanggal, jenis, jumlah, kategori, deskripsi }` | `{ transaksi }` | Invalidasi cache bulan lama+baru |
 | `DELETE /api/transactions/[id]` | PIN | — | `{ ok:true }` | Hapus baris via `deleteDimension` |
@@ -146,7 +146,7 @@ Semua response JSON. Error: `{ error: "pesan Bahasa Indonesia" }`.
 
 ## 6. Auth & Security
 
-- **Web:** `middleware.js` cek JWT di cookie `fintrack_session` untuk `/dashboard/*` dan API privat. API gagal → 401 JSON; page gagal → redirect `/login`.
+- **Web:** `proxy.js` cek JWT di cookie `fintrack_session` untuk `/dashboard/*` dan API privat. API gagal → 401 JSON; page gagal → redirect `/login`.
 - **Sesi:** `SignJWT({ok:true}, HS256)`, expiry `${SESSION_TTL_MINUTES||30}m`, cookie httpOnly (`lib/auth.js:17-23`, `app/api/auth/route.js`).
 - **PIN:** `checkPin()` → `pin_hash` (scrypt+salt, `timingSafeEqual`) atau fallback `PIN_CODE`. `changePin()` tulis hash baru ke Sheets.
 - **Webhook:** secret header `x-telegram-bot-api-secret-token`; token bot tidak pernah ke client.

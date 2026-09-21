@@ -102,7 +102,7 @@ lib/
                     kategori dikirim sebagai parameter, bukan hardcode
   auth.js        → sesi JWT untuk PIN
   categories.js  → hanya fallback statis + fungsi validasi kategoriValid()
-middleware.js    → proteksi PIN untuk /dashboard & semua API terkait
+middleware.js    → proteksi PIN untuk /dashboard & semua API terkait (Next 16: lihat proxy.js)
 ```
 
 ## Catatan

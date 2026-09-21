@@ -14,7 +14,7 @@ async function isValidSession(req) {
   }
 }
 
-export async function middleware(req) {
+export async function proxy(req) {
   const { pathname } = req.nextUrl;
   const authed = await isValidSession(req);
 
@@ -31,15 +31,20 @@ export async function middleware(req) {
   return NextResponse.next();
 }
 
-// Hanya rute yang butuh PIN yang lewat middleware ini. Webhook Telegram &
+// Hanya rute yang butuh PIN yang lewat proxy ini. Webhook Telegram &
 // endpoint auth sengaja TIDAK termasuk — mereka pakai mekanisme sendiri.
+// Setiap rute didaftarkan eksplisit (exact + wildcard) supaya tidak ada
+// endpoint yang lolos tanpa proteksi karena pola matcher yang ambigu.
 export const config = {
   matcher: [
     "/dashboard/:path*",
+    "/api/transactions",
     "/api/transactions/:path*",
     "/api/quick-add",
+    "/api/analysis",
     "/api/analysis/:path*",
     "/api/categories",
+    "/api/settings",
     "/api/settings/:path*",
   ],
 };
