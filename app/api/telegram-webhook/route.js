@@ -37,7 +37,12 @@ function isAuthorized(msg) {
 }
 
 async function handleRingkasan(chatId) {
-  const bulan = new Date().toISOString().slice(0, 7);
+  // Bulan berjalan menurut zona Asia/Jakarta (sama seperti default tanggal
+  // di parseFreeText/quick-add) — jangan pakai UTC agar tidak selisih
+  // di tanggal 1 akhir bulan.
+  const bulan = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" })
+    .format(new Date())
+    .slice(0, 7);
   const semua = await getAllTransactions();
   const bulanIni = semua.filter((t) => monthKeyOf(t.tanggal) === bulan);
   const masuk = bulanIni.filter((t) => t.jenis === "pemasukan").reduce((s, t) => s + t.jumlah, 0);

@@ -138,7 +138,7 @@ Semua response JSON. Error: `{ error: "pesan Bahasa Indonesia" }`.
 
 ### Command Telegram (`app/api/telegram-webhook/route.js`)
 - Teks bebas → `handlePesanBebas()` (multi-transaksi per pesan didukung).
-- `/ringkasan` → total bulan berjalan (ID UTC `toISOString().slice(0,7)` — lihat §8).
+- `/ringkasan` → total bulan berjalan menurut zona Asia/Jakarta (sama seperti default tanggal di parsing AI).
 - `/hapus [prefixId]` → `findIdByPrefix()`; tolak jika 0 atau >1 cocok.
 - `/edit [prefixId] field=nilai` → parser `parseEditCommand()` dukung quoted value (`kategori="Makanan & Minuman"`); validasi `jumlah>0` + `kategoriValid()`.
 - `/start` → pesan bantuan.
@@ -172,7 +172,7 @@ Tab tunggal dengan sidebar: **Ringkasan | Transaksi | Tambah | Analisis AI | Pen
 - **Tema:** putih kertas, font Arial/Helvetica, border tipis, sidebar 220px (collapse ke topbar di ≤760px), palet 13 warna pie, format `Rp + id-ID locale`.
 
 **Catatan desain / tech debt yang diketahui:**
-1. `/ringkasan` bot pakai bulan UTC, sedangkan parsing AI & quick-add pakai Asia/Jakarta → selisih di tanggal 1 akhir bulan. Rekomendasi: samakan ke `Asia/Jakarta` di `handleRingkasan()`.
+1. ~~`/ringkasan` bot pakai bulan UTC~~ — sudah diperbaiki: `handleRingkasan()` kini pakai `Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" })`, konsisten dengan parsing AI & quick-add.
 2. `TELEGRAM_ALLOWED_USERNAMES` kosong = bot terbuka publik (fail-open). Pertimbangkan fail-closed setelah username diset sekali.
 3. Belum ada rate-limit PIN & paginasi tabel (client load seluruh transaksi untuk Ringkasan — wajar untuk skala personal, tapi perlu virtualisasi jika >ribuan baris).
 4. Analisis hanya total + per-kategori; belum ada deteksi anomali statistik.
