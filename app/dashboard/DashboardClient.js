@@ -11,8 +11,7 @@ const WARNA_PEMASUKAN = "#2F5233"; // hijau
 const WARNA_PENGELUARAN = "#A13D2C"; // merah
 const BULAN_ID = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 
-const todayStr = () => new Date().toISOString().slice(0, 10);
-const monthKey = (d) => (d || "").slice(0, 7);
+const todayStr = () => new Date().toLocaleDateString("en-CA");
 const monthKeyOf = (tanggal) => (tanggal || "").slice(0, 7);
 const rupiah = (n) => "Rp" + Math.round(n || 0).toLocaleString("id-ID");
 const labelBulan = (key) => { const [y, m] = key.split("-"); return `${BULAN_ID[parseInt(m, 10) - 1]} ${y}`; };
@@ -75,7 +74,7 @@ function Ringkasan({ curMonth, setCurMonth }) {
   useEffect(() => {
     setLoading(true);
     api("/api/transactions").then((d) => setTransaksi(d.transaksi)).finally(() => setLoading(false));
-  }, [curMonth]);
+  }, []);
 
   const transaksiBulanIni = useMemo(() => {
     return transaksi.filter((t) => monthKeyOf(t.tanggal) === curMonth);
@@ -112,7 +111,7 @@ function Ringkasan({ curMonth, setCurMonth }) {
     .sort((a, b) => b.value - a.value);
   }, [transaksiBulanIni]);
 
-  const isCurrentOrFuture = curMonth >= monthKey(todayStr());
+  const isCurrentOrFuture = curMonth >= monthKeyOf(todayStr());
 
   return (
     <div className="page">
@@ -168,15 +167,21 @@ function Ringkasan({ curMonth, setCurMonth }) {
 
 // ---------------------------------------------------------------------------
 function Transaksi({ kategoriMap }) {
-  const [bulan, setBulan] = useState(monthKey(todayStr()));
+  const [bulan, setBulan] = useState(monthKeyOf(todayStr()));
   const [kategoriFilter, setKategoriFilter] = useState("Semua");
   const [transaksi, setTransaksi] = useState([]);
   const [editId, setEditId] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
   const [hapusErr, setHapusErr] = useState("");
+  const [hapusLoadingId, setHapusLoadingId] = useState(null);
 
-  const muat = useCallback(() => {
-    api(`/api/transactions?bulan=${bulan}`).then((d) => setTransaksi(d.transaksi));
+  const muat = useCallback(async () => {
+    try {
+      const d = await api(`/api/transactions?bulan=${bulan}`);
+      setTransaksi(d.transaksi || []);
+    } catch (e) {
+      setHapusErr(e.message);
+    }
   }, [bulan]);
 
   useEffect(() => { muat(); }, [muat]);
@@ -188,15 +193,20 @@ function Transaksi({ kategoriMap }) {
   const startEdit = (t) => { setEditId(t.id); setEditDraft({ ...t }); };
   const saveEdit = async () => {
     await api(`/api/transactions/${editId}`, { method: "PATCH", body: JSON.stringify(editDraft) });
-    setEditId(null); muat();
+    setEditId(null);
+    await muat();
   };
   const hapus = async (id) => {
+    if (!window.confirm("Yakin ingin menghapus transaksi ini?")) return;
     setHapusErr("");
+    setHapusLoadingId(id);
     try {
       await api(`/api/transactions/${id}`, { method: "DELETE" });
-      muat();
+      await muat();
     } catch (err) {
       setHapusErr(err.message);
+    } finally {
+      setHapusLoadingId(null);
     }
   };
 
@@ -253,8 +263,10 @@ function Transaksi({ kategoriMap }) {
                   <td className="muted">{t.sumber_input === "telegram" ? "Telegram" : t.sumber_input === "website_quick_add" ? "Tambah cepat" : "Form"}</td>
                   <td className={"num " + (t.jenis === "pemasukan" ? "text-blue" : "text-brick")}>{t.jenis === "pemasukan" ? "+" : "-"}{rupiah(t.jumlah)}</td>
                   <td className="row-actions">
-                    <button type="button" onClick={() => startEdit(t)}>✎</button>
-                    <button type="button" onClick={() => hapus(t.id)}>🗑</button>
+                    <button type="button" onClick={() => startEdit(t)} disabled={hapusLoadingId === t.id} title="Edit transaksi">✎</button>
+                    <button type="button" onClick={() => hapus(t.id)} disabled={hapusLoadingId === t.id} title="Hapus transaksi">
+                      {hapusLoadingId === t.id ? "…" : "🗑"}
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -274,6 +286,8 @@ function Tambah({ kategoriMap, onSaved }) {
   const [kategori, setKategori] = useState(kategoriMap.pengeluaran[0] || "");
   const [deskripsi, setDeskripsi] = useState("");
   const [formErr, setFormErr] = useState("");
+  const [formOk, setFormOk] = useState("");
+  const [loadingForm, setLoadingForm] = useState(false);
 
   const [teks, setTeks] = useState("");
   const [loadingQuick, setLoadingQuick] = useState(false);
@@ -285,11 +299,18 @@ function Tambah({ kategoriMap, onSaved }) {
   const submitForm = async (e) => {
     e.preventDefault();
     setFormErr("");
+    setFormOk("");
+    setLoadingForm(true);
     try {
       await api("/api/transactions", { method: "POST", body: JSON.stringify({ tanggal, jenis, jumlah: Number(jumlah), kategori, deskripsi }) });
-      setJumlah(""); setDeskripsi(""); onSaved?.();
+      setJumlah("");
+      setDeskripsi("");
+      setFormOk("Transaksi berhasil disimpan.");
+      onSaved?.();
     } catch (err) {
       setFormErr(err.message);
+    } finally {
+      setLoadingForm(false);
     }
   };
 
@@ -340,7 +361,8 @@ function Tambah({ kategoriMap, onSaved }) {
             </label>
             <label>Deskripsi<input value={deskripsi} onChange={(e) => setDeskripsi(e.target.value)} placeholder="opsional" className="field" /></label>
             {formErr && <div className="form-error">{formErr}</div>}
-            <button type="submit" className="btn-primary">Simpan transaksi</button>
+            {formOk && <div className="form-ok">{formOk}</div>}
+            <button type="submit" className="btn-primary" disabled={loadingForm}>{loadingForm ? "Menyimpan…" : "Simpan transaksi"}</button>
           </form>
         </div>
       </div>
@@ -491,7 +513,7 @@ function Pengaturan() {
 // ---------------------------------------------------------------------------
 export default function DashboardClient() {
   const [tab, setTab] = useState("ringkasan");
-  const [curMonth, setCurMonth] = useState(monthKey(todayStr()));
+  const [curMonth, setCurMonth] = useState(monthKeyOf(todayStr()));
   const [refreshKey, setRefreshKey] = useState(0);
   const [kategoriMap, setKategoriMap] = useState({ pengeluaran: [], pemasukan: [] });
 

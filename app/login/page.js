@@ -18,10 +18,11 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pin }),
       });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         router.push("/dashboard");
       } else {
-        setError("PIN salah."); // generik, tanpa info percobaan (FR-32)
+        setError(data.error || "PIN salah.");
         setPin("");
       }
     } catch {

@@ -31,15 +31,24 @@ export async function POST(req) {
     );
   }
 
+  const validTransaksi = (hasil.transaksi || []).filter((t) => Number(t.jumlah) > 0);
+  if (validTransaksi.length === 0) {
+    return NextResponse.json(
+      { error: "Nominal transaksi tidak valid atau bernilai 0. Mohon sebutkan jumlah dengan jelas." },
+      { status: 422 }
+    );
+  }
+
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
   const disimpan = [];
-  for (const t of hasil.transaksi) {
+  for (const t of validTransaksi) {
     const jenis = t.jenis === "pemasukan" ? "pemasukan" : "pengeluaran";
     const kategori = kategoriValid(jenis, t.kategori, kategoriMap) ? t.kategori : "Lainnya";
     const tx = {
       id: randomUUID(),
-      tanggal: t.tanggal || new Date().toISOString().slice(0, 10),
+      tanggal: t.tanggal || today,
       jenis,
-      jumlah: Number(t.jumlah) || 0,
+      jumlah: Number(t.jumlah),
       kategori,
       deskripsi: t.deskripsi || text.trim(),
       chat_asli: text.trim(),

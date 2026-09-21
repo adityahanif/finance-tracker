@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
-import { SESSION_COOKIE } from "./lib/auth";
+import { SESSION_COOKIE } from "./lib/constants";
 
 async function isValidSession(req) {
   const token = req.cookies.get(SESSION_COOKIE)?.value;

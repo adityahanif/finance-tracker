@@ -3,7 +3,7 @@ import { parseFreeText } from "../../../lib/gemini";
 import {
   appendTransaction, updateTransactionById, deleteTransactionById,
   getAllTransactions, clearCachedAnalysis, monthKeyOf,
-  getCategories, getSetting, findIdByPrefix,
+  getCategories, getSetting, findIdByPrefix, findTransactionById,
 } from "../../../lib/sheets";
 import { kategoriValid } from "../../../lib/categories";
 import { randomUUID } from "crypto";
@@ -54,36 +54,84 @@ async function handleHapus(chatId, idInput) {
   if (!fullId) {
     return sendMessage(chatId, `ID "${idInput}" tidak ditemukan atau cocok dengan lebih dari satu transaksi. Cek ID lengkapnya di dashboard/tab Transaksi.`);
   }
-  const ok = await deleteTransactionById(fullId);
-  await sendMessage(chatId, ok ? `Transaksi ${idInput} dihapus.` : `ID ${idInput} tidak ditemukan.`);
+  const deleted = await deleteTransactionById(fullId);
+  if (deleted) {
+    if (deleted.tanggal) await clearCachedAnalysis(monthKeyOf(deleted.tanggal));
+    await sendMessage(chatId, `Transaksi ${idInput} dihapus.`);
+  } else {
+    await sendMessage(chatId, `ID ${idInput} tidak ditemukan.`);
+  }
 }
 
-// Format: /edit <id> jumlah=20000 kategori=Transportasi deskripsi=ojek
-async function handleEdit(chatId, args) {
-  const [idInput, ...pairs] = args;
-  if (!idInput || pairs.length === 0) {
-    return sendMessage(chatId, "Format: /edit [id] field=nilai (contoh: /edit ab12cd jumlah=20000 kategori=Transportasi)");
+function parseEditCommand(rawText) {
+  const cleaned = rawText.replace(/^\/edit\s*/i, "").trim();
+  if (!cleaned) return { idInput: null, patch: {} };
+
+  const firstSpace = cleaned.search(/\s/);
+  if (firstSpace === -1) {
+    return { idInput: cleaned, patch: {} };
+  }
+
+  const idInput = cleaned.slice(0, firstSpace).trim();
+  const rest = cleaned.slice(firstSpace).trim();
+
+  const patch = {};
+  const regex = /(tanggal|jenis|jumlah|kategori|deskripsi)\s*=\s*(?:"([^"]*)"|'([^']*)'|((?:(?!\s+(?:tanggal|jenis|jumlah|kategori|deskripsi)\s*=).)+))/gi;
+  let match;
+  while ((match = regex.exec(rest)) !== null) {
+    const key = match[1].toLowerCase();
+    const val = (match[2] ?? match[3] ?? match[4] ?? "").trim();
+    patch[key] = val;
+  }
+
+  if (Object.keys(patch).length === 0) {
+    const pairs = rest.split(/\s+/);
+    for (const p of pairs) {
+      const [k, ...v] = p.split("=");
+      if (!k || v.length === 0) continue;
+      patch[k.trim().toLowerCase()] = v.join("=").trim();
+    }
+  }
+
+  return { idInput, patch };
+}
+
+// Format: /edit <id> jumlah=20000 kategori=Makanan & Minuman deskripsi=ojek
+async function handleEdit(chatId, rawText) {
+  const { idInput, patch } = parseEditCommand(rawText);
+  if (!idInput || Object.keys(patch).length === 0) {
+    return sendMessage(
+      chatId,
+      "Format: /edit [id] field=nilai\nContoh:\n/edit ab12cd kategori=Makanan & Minuman\n/edit ab12cd jumlah=20000 deskripsi=beli nasi padang"
+    );
   }
   const fullId = await findIdByPrefix(idInput);
   if (!fullId) {
     return sendMessage(chatId, `ID "${idInput}" tidak ditemukan atau cocok dengan lebih dari satu transaksi.`);
   }
-  const patch = {};
-  for (const p of pairs) {
-    const [k, ...rest] = p.split("=");
-    if (!k || rest.length === 0) continue;
-    patch[k.trim()] = rest.join("=").trim();
+
+  const existing = await findTransactionById(fullId);
+  if (!existing) return sendMessage(chatId, `ID ${idInput} tidak ditemukan.`);
+
+  if (patch.jumlah !== undefined) {
+    const n = Number(patch.jumlah);
+    if (!n || n <= 0) return sendMessage(chatId, "Jumlah harus angka positif.");
+    patch.jumlah = n;
   }
-  if (patch.jumlah) patch.jumlah = Number(patch.jumlah);
-  if (patch.jenis && patch.kategori) {
+  const effectiveJenis = patch.jenis || existing.jenis;
+  const effectiveKategori = patch.kategori || existing.kategori;
+  if (patch.jenis || patch.kategori) {
     const kategoriMap = await getCategories();
-    if (!kategoriValid(patch.jenis, patch.kategori, kategoriMap)) {
-      return sendMessage(chatId, `Kategori "${patch.kategori}" tidak valid untuk jenis "${patch.jenis}".`);
+    if (!kategoriValid(effectiveJenis, effectiveKategori, kategoriMap)) {
+      return sendMessage(chatId, `Kategori "${effectiveKategori}" tidak valid untuk jenis "${effectiveJenis}".`);
     }
   }
   const updated = await updateTransactionById(fullId, patch);
   if (!updated) return sendMessage(chatId, `ID ${idInput} tidak ditemukan.`);
   await clearCachedAnalysis(monthKeyOf(updated.tanggal));
+  if (existing.tanggal && monthKeyOf(existing.tanggal) !== monthKeyOf(updated.tanggal)) {
+    await clearCachedAnalysis(monthKeyOf(existing.tanggal));
+  }
   await sendMessage(chatId, `Transaksi ${idInput} diperbarui.`);
 }
 
@@ -102,15 +150,21 @@ async function handlePesanBebas(chatId, teks) {
     return sendMessage(chatId, hasil.error || "Pesan kurang jelas. Sertakan jumlah dan keterangan transaksinya ya.");
   }
 
+  const validTransaksi = (hasil.transaksi || []).filter((t) => Number(t.jumlah) > 0);
+  if (validTransaksi.length === 0) {
+    return sendMessage(chatId, "Nominal transaksi tidak valid atau bernilai 0. Sertakan jumlah dengan jelas ya.");
+  }
+
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
   const ringkasanBaris = [];
-  for (const t of hasil.transaksi) {
+  for (const t of validTransaksi) {
     const jenis = t.jenis === "pemasukan" ? "pemasukan" : "pengeluaran";
     const kategori = kategoriValid(jenis, t.kategori, kategoriMap) ? t.kategori : "Lainnya";
     const tx = {
       id: randomUUID(),
-      tanggal: t.tanggal || new Date().toISOString().slice(0, 10),
+      tanggal: t.tanggal || today,
       jenis,
-      jumlah: Number(t.jumlah) || 0,
+      jumlah: Number(t.jumlah),
       kategori,
       deskripsi: t.deskripsi || teks,
       chat_asli: teks,
@@ -153,8 +207,7 @@ export async function POST(req) {
       const [, id] = teks.split(/\s+/);
       await handleHapus(chatId, id);
     } else if (teks.startsWith("/edit")) {
-      const [, ...args] = teks.split(/\s+/);
-      await handleEdit(chatId, args);
+      await handleEdit(chatId, teks);
     } else if (teks.startsWith("/start")) {
       await sendMessage(chatId, "Halo! Kirim pesan seperti \"bakso 15rb\" untuk mencatat transaksi. Perintah lain: /ringkasan, /edit [id] field=nilai, /hapus [id].");
     } else {
