@@ -11,7 +11,7 @@ const WARNA_PEMASUKAN = "#2F5233"; // hijau
 const WARNA_PENGELUARAN = "#A13D2C"; // merah
 const BULAN_ID = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 
-const todayStr = () => new Date().toLocaleDateString("en-CA");
+const todayStr = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
 const monthKeyOf = (tanggal) => (tanggal || "").slice(0, 7);
 const rupiah = (n) => "Rp" + Math.round(n || 0).toLocaleString("id-ID");
 const labelBulan = (key) => { const [y, m] = key.split("-"); return `${BULAN_ID[parseInt(m, 10) - 1]} ${y}`; };
