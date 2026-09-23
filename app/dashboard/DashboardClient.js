@@ -6,9 +6,9 @@ import {
   XAxis, YAxis, Tooltip, CartesianGrid, Legend,
 } from "recharts";
 
-const PALET = ["#2F5233", "#A13D2C", "#2C4A6E", "#8A6D2F", "#5B4636", "#3E6B5E", "#7A3B4E", "#4A5A2F", "#6B4A8A", "#2F6B6E", "#8A5A2F", "#4A4A6E", "#6E6E4A"];
-const WARNA_PEMASUKAN = "#2F5233"; // hijau
-const WARNA_PENGELUARAN = "#A13D2C"; // merah
+const PALET = ["#0D9488", "#E11D48", "#4F46E5", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4", "#10B981", "#F97316", "#6366F1", "#14B8A6", "#F43F5E", "#3B82F6"];
+const WARNA_PEMASUKAN = "#0D9488"; // teal
+const WARNA_PENGELUARAN = "#E11D48"; // rose
 const BULAN_ID = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 
 const todayStr = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
@@ -136,9 +136,9 @@ function Ringkasan({ curMonth, setCurMonth }) {
       {loadErr && <div className="form-error" style={{ marginBottom: 12 }}>{loadErr}</div>}
 
       <div className="stat-row">
-        <StatCard label="Pemasukan" value={totalMasuk} tone="blue" />
-        <StatCard label="Pengeluaran" value={totalKeluar} tone="brick" />
-        <StatCard label="Saldo Bulan Ini" value={totalMasuk - totalKeluar} tone="green" />
+        <StatCard label="Pemasukan" value={totalMasuk} tone="indigo" />
+        <StatCard label="Pengeluaran" value={totalKeluar} tone="rose" />
+        <StatCard label="Saldo Bulan Ini" value={totalMasuk - totalKeluar} tone="teal" />
       </div>
 
       <div className="panel-row">
@@ -291,11 +291,11 @@ function Transaksi({ kategoriMap }) {
                 ) : (
                   <tr key={t.id}>
                     <td>{t.tanggal}</td>
-                    <td><span className={"pill " + (t.jenis === "pemasukan" ? "pill-blue" : "pill-brick")}>{t.jenis}</span></td>
+                    <td><span className={"pill " + (t.jenis === "pemasukan" ? "pill-indigo" : "pill-rose")}>{t.jenis}</span></td>
                     <td>{t.kategori}</td>
                     <td className="desc-cell" title={t.deskripsi}>{t.deskripsi}</td>
                     <td className="muted">{t.sumber_input === "telegram" ? "Telegram" : t.sumber_input === "website_quick_add" ? "Tambah cepat" : "Form"}</td>
-                    <td className={"num " + (t.jenis === "pemasukan" ? "text-blue" : "text-brick")}>{t.jenis === "pemasukan" ? "+" : "-"}{rupiah(t.jumlah)}</td>
+                    <td className={"num " + (t.jenis === "pemasukan" ? "text-indigo" : "text-rose")}>{t.jenis === "pemasukan" ? "+" : "-"}{rupiah(t.jumlah)}</td>
                     <td className="row-actions">
                       <button type="button" onClick={() => startEdit(t)} disabled={hapusLoadingId === t.id} title="Edit transaksi">✎</button>
                       <button type="button" onClick={() => hapus(t.id)} disabled={hapusLoadingId === t.id} title="Hapus transaksi">
