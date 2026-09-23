@@ -9,6 +9,10 @@ export async function GET(req) {
   const monthsParam = searchParams.get("months"); // format "YYYY-MM,YYYY-MM,...", opsional
   const from = searchParams.get("from"); // format YYYY-MM, opsional (inklusif)
   const to = searchParams.get("to"); // format YYYY-MM, opsional (inklusif)
+  const kategori = searchParams.get("kategori");
+  const page = parseInt(searchParams.get("page")) || 1;
+  const limit = parseInt(searchParams.get("limit")) || 20;
+  const sortBy = searchParams.get("sortBy") || "tanggalDesc";
 
   try {
     let data = await getAllTransactions();
@@ -27,8 +31,37 @@ export async function GET(req) {
     } else if (bulan) {
       data = data.filter((t) => monthKeyOf(t.tanggal) === bulan);
     }
-    data.sort((a, b) => (a.tanggal < b.tanggal ? 1 : -1));
-    return NextResponse.json({ transaksi: data });
+
+    // filter kategori jika disediakan
+    if (kategori) {
+      data = data.filter((t) => t.kategori === kategori);
+    }
+
+    // sorting
+    data.sort((a, b) => {
+      if (sortBy === "tanggalDesc") return a.tanggal < b.tanggal ? 1 : -1;
+      if (sortBy === "tanggalAsc") return a.tanggal > b.tanggal ? 1 : -1;
+      if (sortBy === "jumlahDesc") return b.jumlah - a.jumlah;
+      if (sortBy === "jumlahAsc") return a.jumlah - b.jumlah;
+      return 0;
+    });
+
+    // pagination
+    const total = data.length;
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    const paginated = data.slice(start, end);
+
+    return NextResponse.json({
+      transaksi: paginated,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+        hasMore: end < total,
+      },
+    });
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

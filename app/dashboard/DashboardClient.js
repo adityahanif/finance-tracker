@@ -88,7 +88,7 @@ function Ringkasan({ curMonth, setCurMonth }) {
     let cancelled = false;
     setLoading(true);
     setLoadErr("");
-    api(`/api/transactions?months=${windowMonths.join(",")}`)
+    api(`/api/transactions?months=${windowMonths.join(",")}&limit=9999`)
       .then((d) => { if (!cancelled) setTransaksi(d.transaksi || []); })
       .catch((e) => { if (!cancelled) setLoadErr(e.message); })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -185,25 +185,32 @@ function Transaksi({ kategoriMap }) {
   const [bulan, setBulan] = useState(monthKeyOf(todayStr()));
   const [kategoriFilter, setKategoriFilter] = useState("Semua");
   const [transaksi, setTransaksi] = useState([]);
+  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 1, hasMore: false });
   const [editId, setEditId] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
   const [hapusErr, setHapusErr] = useState("");
   const [hapusLoadingId, setHapusLoadingId] = useState(null);
+  const [sortBy, setSortBy] = useState("tanggalDesc");
 
   const muat = useCallback(async () => {
     try {
-      const d = await api(`/api/transactions?bulan=${bulan}`);
+      const params = new URLSearchParams({ bulan, page: pagination.page, limit: pagination.limit, sortBy });
+      if (kategoriFilter !== "Semua") params.append("kategori", kategoriFilter);
+      const d = await api(`/api/transactions?${params}`);
       setTransaksi(d.transaksi || []);
+      setPagination(d.pagination || { page: 1, limit: 20, total: 0, totalPages: 1, hasMore: false });
     } catch (e) {
       setHapusErr(e.message);
     }
-  }, [bulan]);
+  }, [bulan, pagination.page, pagination.limit, sortBy, kategoriFilter]);
 
   useEffect(() => { muat(); }, [muat]);
 
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, page: 1 }));
+  }, [bulan, kategoriFilter, sortBy]);
+
   const semuaKategori = ["Semua", ...kategoriMap.pengeluaran, ...kategoriMap.pemasukan.filter((k) => !kategoriMap.pengeluaran.includes(k))];
-  const filtered = transaksi.filter((t) => kategoriFilter === "Semua" || t.kategori === kategoriFilter)
-    .sort((a, b) => (a.tanggal < b.tanggal ? 1 : -1));
 
   const startEdit = (t) => { setEditId(t.id); setEditDraft({ ...t }); };
   const saveEdit = async () => {
@@ -233,60 +240,81 @@ function Transaksi({ kategoriMap }) {
         <select value={kategoriFilter} onChange={(e) => setKategoriFilter(e.target.value)} className="field" style={{ width: 200 }}>
           {semuaKategori.map((k) => <option key={k} value={k}>{k}</option>)}
         </select>
-        <span className="filter-count">{filtered.length} entri</span>
+        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="field" style={{ width: 220 }}>
+          <option value="tanggalDesc">Tanggal terbaru</option>
+          <option value="tanggalAsc">Tanggal terlama</option>
+          <option value="jumlahDesc">Jumlah tertinggi</option>
+          <option value="jumlahAsc">Jumlah terendah</option>
+        </select>
+        <select value={pagination.limit} onChange={(e) => setPagination(prev => ({ ...prev, limit: parseInt(e.target.value), page: 1 }))} className="field" style={{ width: 120 }}>
+          <option value="10">10/Halaman</option>
+          <option value="20">20/Halaman</option>
+          <option value="50">50/Halaman</option>
+        </select>
+        <span className="filter-count">{pagination.total} entri (hal {pagination.page}/{pagination.totalPages})</span>
       </div>
 
       {hapusErr && <div className="form-error" style={{ marginBottom: 8 }}>{hapusErr}</div>}
 
       <div className="table-wrap">
-        {filtered.length === 0 ? (
+        {transaksi.length === 0 ? (
           <div className="empty-mini">Tidak ada transaksi untuk filter ini.</div>
         ) : (
-          <table className="ledger-table">
-            <thead>
-              <tr><th>Tanggal</th><th>Jenis</th><th>Kategori</th><th>Deskripsi</th><th>Sumber</th><th className="num">Jumlah</th><th></th></tr>
-            </thead>
-            <tbody>
-              {filtered.map((t) => editId === t.id ? (
-                <tr key={t.id} className="editing-row">
-                  <td><input type="date" value={editDraft.tanggal} onChange={(e) => setEditDraft({ ...editDraft, tanggal: e.target.value })} className="field sm" /></td>
-                  <td>
-                    <select value={editDraft.jenis} onChange={(e) => setEditDraft({ ...editDraft, jenis: e.target.value, kategori: (e.target.value === "pemasukan" ? kategoriMap.pemasukan : kategoriMap.pengeluaran)[0] })} className="field sm">
-                      <option value="pengeluaran">pengeluaran</option>
-                      <option value="pemasukan">pemasukan</option>
-                    </select>
-                  </td>
-                  <td>
-                    <select value={editDraft.kategori} onChange={(e) => setEditDraft({ ...editDraft, kategori: e.target.value })} className="field sm">
-                      {(editDraft.jenis === "pemasukan" ? kategoriMap.pemasukan : kategoriMap.pengeluaran).map((k) => <option key={k} value={k}>{k}</option>)}
-                    </select>
-                  </td>
-                  <td><input value={editDraft.deskripsi} onChange={(e) => setEditDraft({ ...editDraft, deskripsi: e.target.value })} className="field sm" /></td>
-                  <td className="muted">{editDraft.sumber_input}</td>
-                  <td><input type="number" value={editDraft.jumlah} onChange={(e) => setEditDraft({ ...editDraft, jumlah: Number(e.target.value) })} className="field sm num" /></td>
-                  <td className="row-actions">
-                    <button type="button" onClick={saveEdit}>✓</button>
-                    <button type="button" onClick={() => setEditId(null)}>✕</button>
-                  </td>
-                </tr>
-              ) : (
-                <tr key={t.id}>
-                  <td>{t.tanggal}</td>
-                  <td><span className={"pill " + (t.jenis === "pemasukan" ? "pill-blue" : "pill-brick")}>{t.jenis}</span></td>
-                  <td>{t.kategori}</td>
-                  <td className="desc-cell" title={t.deskripsi}>{t.deskripsi}</td>
-                  <td className="muted">{t.sumber_input === "telegram" ? "Telegram" : t.sumber_input === "website_quick_add" ? "Tambah cepat" : "Form"}</td>
-                  <td className={"num " + (t.jenis === "pemasukan" ? "text-blue" : "text-brick")}>{t.jenis === "pemasukan" ? "+" : "-"}{rupiah(t.jumlah)}</td>
-                  <td className="row-actions">
-                    <button type="button" onClick={() => startEdit(t)} disabled={hapusLoadingId === t.id} title="Edit transaksi">✎</button>
-                    <button type="button" onClick={() => hapus(t.id)} disabled={hapusLoadingId === t.id} title="Hapus transaksi">
-                      {hapusLoadingId === t.id ? "…" : "🗑"}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <>
+            <table className="ledger-table">
+              <thead>
+                <tr><th>Tanggal</th><th>Jenis</th><th>Kategori</th><th>Deskripsi</th><th>Sumber</th><th className="num">Jumlah</th><th></th></tr>
+              </thead>
+              <tbody>
+                {transaksi.map((t) => editId === t.id ? (
+                  <tr key={t.id} className="editing-row">
+                    <td><input type="date" value={editDraft.tanggal} onChange={(e) => setEditDraft({ ...editDraft, tanggal: e.target.value })} className="field sm" /></td>
+                    <td>
+                      <select value={editDraft.jenis} onChange={(e) => setEditDraft({ ...editDraft, jenis: e.target.value, kategori: (e.target.value === "pemasukan" ? kategoriMap.pemasukan : kategoriMap.pengeluaran)[0] })} className="field sm">
+                        <option value="pengeluaran">pengeluaran</option>
+                        <option value="pemasukan">pemasukan</option>
+                      </select>
+                    </td>
+                    <td>
+                      <select value={editDraft.kategori} onChange={(e) => setEditDraft({ ...editDraft, kategori: e.target.value })} className="field sm">
+                        {(editDraft.jenis === "pemasukan" ? kategoriMap.pemasukan : kategoriMap.pengeluaran).map((k) => <option key={k} value={k}>{k}</option>)}
+                      </select>
+                    </td>
+                    <td><input value={editDraft.deskripsi} onChange={(e) => setEditDraft({ ...editDraft, deskripsi: e.target.value })} className="field sm" /></td>
+                    <td className="muted">{editDraft.sumber_input}</td>
+                    <td><input type="number" value={editDraft.jumlah} onChange={(e) => setEditDraft({ ...editDraft, jumlah: Number(e.target.value) })} className="field sm num" /></td>
+                    <td className="row-actions">
+                      <button type="button" onClick={saveEdit}>✓</button>
+                      <button type="button" onClick={() => setEditId(null)}>✕</button>
+                    </td>
+                  </tr>
+                ) : (
+                  <tr key={t.id}>
+                    <td>{t.tanggal}</td>
+                    <td><span className={"pill " + (t.jenis === "pemasukan" ? "pill-blue" : "pill-brick")}>{t.jenis}</span></td>
+                    <td>{t.kategori}</td>
+                    <td className="desc-cell" title={t.deskripsi}>{t.deskripsi}</td>
+                    <td className="muted">{t.sumber_input === "telegram" ? "Telegram" : t.sumber_input === "website_quick_add" ? "Tambah cepat" : "Form"}</td>
+                    <td className={"num " + (t.jenis === "pemasukan" ? "text-blue" : "text-brick")}>{t.jenis === "pemasukan" ? "+" : "-"}{rupiah(t.jumlah)}</td>
+                    <td className="row-actions">
+                      <button type="button" onClick={() => startEdit(t)} disabled={hapusLoadingId === t.id} title="Edit transaksi">✎</button>
+                      <button type="button" onClick={() => hapus(t.id)} disabled={hapusLoadingId === t.id} title="Hapus transaksi">
+                        {hapusLoadingId === t.id ? "…" : "🗑"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {pagination.totalPages > 1 && (
+              <div className="pagination">
+                <button onClick={() => setPagination(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))} disabled={pagination.page === 1}>‹</button>
+                <span>{pagination.page} / {pagination.totalPages}</span>
+                <button onClick={() => setPagination(prev => ({ ...prev, page: Math.min(pagination.totalPages, prev.page + 1) }))} disabled={pagination.page === pagination.totalPages}>›</button>
+                <span className="pagination-hint">({pagination.limit} per halaman)</span>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

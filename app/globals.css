@@ -76,6 +76,18 @@ button, input, select, textarea { font-family: var(--font); }
 .filter-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .filter-count { font-size: 12px; color: var(--rule-dark); margin-left: auto; }
 
+.pagination {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--rule);
+  font-size: 12.5px;
+}
+.pagination button {
+  border: 1px solid var(--rule-dark); background: #fff; border-radius: 3px;
+  width: 26px; height: 26px; cursor: pointer;
+}
+.pagination button:disabled { opacity: 0.35; cursor: not-allowed; }
+.pagination-hint { color: var(--rule-dark); font-size: 11px; }
+
 .field {
   font-size: 13.5px; color: var(--ink); background: #fff; border: 1px solid var(--rule-dark);
   border-radius: 3px; padding: 7px 9px; width: 100%;
@@ -146,6 +158,12 @@ button, input, select, textarea { font-family: var(--font); }
   .content { padding: 18px; }
   .panel-row { grid-template-columns: 1fr; }
   .stat-row { grid-template-columns: 1fr; }
+  .filter-row { flex-wrap: wrap; gap: 8px; }
+  .filter-row input, .filter-row select { flex: 1 1 calc(50% - 4px); min-width: 120px; }
+  .filter-count { flex: 1 1 100%; margin-left: 0; margin-top: 4px; text-align: center; font-size: 11px; }
+  .pagination { flex-wrap: wrap; gap: 8px; }
+  .pagination button, .pagination span { font-size: 11px; }
+  .pagination-hint { flex: 1 1 100%; text-align: center; font-size: 10px; }
 }
 
 .pie-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; margin-top: 6px; font-size: 12px; }
