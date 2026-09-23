@@ -6,9 +6,9 @@ import {
   XAxis, YAxis, Tooltip, CartesianGrid, Legend,
 } from "recharts";
 
-const PALET = ["#0D9488", "#E11D48", "#4F46E5", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4", "#10B981", "#F97316", "#6366F1", "#14B8A6", "#F43F5E", "#3B82F6"];
-const WARNA_PEMASUKAN = "#0D9488"; // teal
-const WARNA_PENGELUARAN = "#E11D48"; // rose
+const PALET = ["#2563eb", "#dc2626", "#16a34a", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4", "#111827", "#f97316", "#6366f1", "#14b8a6", "#f43f5e", "#3b82f6"];
+const WARNA_PEMASUKAN = "#16a34a"; // green
+const WARNA_PENGELUARAN = "#dc2626"; // red
 const BULAN_ID = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 
 const todayStr = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
@@ -136,7 +136,7 @@ function Ringkasan({ curMonth, setCurMonth }) {
       {loadErr && <div className="form-error" style={{ marginBottom: 12 }}>{loadErr}</div>}
 
       <div className="stat-row">
-        <StatCard label="Pemasukan" value={totalMasuk} tone="indigo" />
+        <StatCard label="Pemasukan" value={totalMasuk} tone="green" />
         <StatCard label="Pengeluaran" value={totalKeluar} tone="rose" />
         <StatCard label="Saldo Bulan Ini" value={totalMasuk - totalKeluar} tone="teal" />
       </div>
