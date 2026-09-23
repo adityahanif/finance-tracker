@@ -283,9 +283,11 @@ function Transaksi({ kategoriMap }) {
                     <td><input value={editDraft.deskripsi} onChange={(e) => setEditDraft({ ...editDraft, deskripsi: e.target.value })} className="field sm" /></td>
                     <td className="muted">{editDraft.sumber_input}</td>
                     <td><input type="number" value={editDraft.jumlah} onChange={(e) => setEditDraft({ ...editDraft, jumlah: Number(e.target.value) })} className="field sm num" /></td>
-                    <td className="row-actions">
-                      <button type="button" onClick={saveEdit}>✓</button>
-                      <button type="button" onClick={() => setEditId(null)}>✕</button>
+                    <td>
+                      <div className="row-actions">
+                        <button type="button" onClick={saveEdit}>✓</button>
+                        <button type="button" onClick={() => setEditId(null)}>✕</button>
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -295,12 +297,14 @@ function Transaksi({ kategoriMap }) {
                     <td>{t.kategori}</td>
                     <td className="desc-cell" title={t.deskripsi}>{t.deskripsi}</td>
                     <td className="muted">{t.sumber_input === "telegram" ? "Telegram" : t.sumber_input === "website_quick_add" ? "Tambah cepat" : "Form"}</td>
-                    <td className={"num " + (t.jenis === "pemasukan" ? "text-indigo" : "text-rose")}>{t.jenis === "pemasukan" ? "+" : "-"}{rupiah(t.jumlah)}</td>
-                    <td className="row-actions">
-                      <button type="button" onClick={() => startEdit(t)} disabled={hapusLoadingId === t.id} title="Edit transaksi">✎</button>
-                      <button type="button" onClick={() => hapus(t.id)} disabled={hapusLoadingId === t.id} title="Hapus transaksi">
-                        {hapusLoadingId === t.id ? "…" : "🗑"}
-                      </button>
+                    <td className={"num amount-cell " + (t.jenis === "pemasukan" ? "text-indigo" : "text-rose")}>{t.jenis === "pemasukan" ? "+" : "-"}{rupiah(t.jumlah)}</td>
+                    <td>
+                      <div className="row-actions">
+                        <button type="button" onClick={() => startEdit(t)} disabled={hapusLoadingId === t.id} title="Edit transaksi">✎</button>
+                        <button type="button" onClick={() => hapus(t.id)} disabled={hapusLoadingId === t.id} title="Hapus transaksi">
+                          {hapusLoadingId === t.id ? "…" : "🗑"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

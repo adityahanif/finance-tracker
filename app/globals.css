@@ -153,15 +153,16 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .ledger-table td { padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--rule); vertical-align: middle; }
 .ledger-table tr:last-child td { border-bottom: none; }
 .ledger-table tr:hover td { background: rgba(1,117,21,0.03); }
-.desc-cell { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.desc-cell { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.amount-cell { white-space: nowrap; }
 .muted { color: var(--rule-dark); font-size: 12px; }
 .text-indigo { color: var(--indigo); }
 .text-rose { color: var(--rose); }
 .pill { font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
 .pill-indigo { background: rgba(79,70,229,0.1); color: var(--indigo); }
 .pill-rose { background: rgba(225,29,72,0.1); color: var(--rose); }
-.row-actions { display: flex; gap: 4px; white-space: nowrap; }
-.row-actions button { border: none; background: transparent; cursor: pointer; opacity: 0.6; padding: 2px; border-radius: var(--radius-sm); transition: background-color 0.15s ease, opacity 0.15s ease; }
+.row-actions { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; vertical-align: middle; }
+.row-actions button { border: none; background: transparent; cursor: pointer; opacity: 0.6; padding: 2px 4px; border-radius: var(--radius-sm); transition: background-color 0.15s ease, opacity 0.15s ease; font-size: 14px; line-height: 1; }
 .row-actions button:hover { opacity: 1; background: rgba(0,0,0,0.05); }
 .editing-row td { background: rgba(1,117,21,0.05); }
 
