@@ -169,7 +169,7 @@ Tab tunggal dengan sidebar: **Ringkasan | Transaksi | Tambah | Analisis AI | Pen
 - **Tambah:** dua panel — *Tambah cepat* (textarea + AI) dan *Form terstruktur* (jenis/tanggal/jumlah/kategori/deskripsi, tanpa AI).
 - **Analisis AI:** GET cache per `curMonth`; tombol "Jalankan/Buat ulang"; render `ReactMarkdown`.
 - **Pengaturan:** form ganti PIN (validasi konfirmasi cocok di client) + form nama model Gemini.
-- **Tema:** putih kertas, font Arial/Helvetica, border tipis, sidebar 220px (collapse ke topbar di ≤760px), palet 13 warna pie, format `Rp + id-ID locale`.
+- **Tema:** putih kertas dengan texture noise sangat halus, font Arial/Helvetica dengan improved typography scale, border tipis dengan konsisten radius, sidebar 240px (collapse ke topbar di ≤760px), palet 13 warna pie, format `Rp + id-ID locale`. Elevation shadow subtle untuk cards dan panels, hover states untuk interaksi, focus visible untuk aksesibilitas keyboard.
 
 **Catatan desain / tech debt yang diketahui:**
 1. ~~`/ringkasan` bot pakai bulan UTC~~ — sudah diperbaiki: `handleRingkasan()` kini pakai `Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" })`, konsisten dengan parsing AI & quick-add.

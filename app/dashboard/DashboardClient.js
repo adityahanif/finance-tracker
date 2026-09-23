@@ -138,19 +138,19 @@ function Ringkasan({ curMonth, setCurMonth }) {
       <div className="stat-row">
         <StatCard label="Pemasukan" value={totalMasuk} tone="blue" />
         <StatCard label="Pengeluaran" value={totalKeluar} tone="brick" />
-        <StatCard label="Saldo bersih" value={totalMasuk - totalKeluar} tone="green" />
+        <StatCard label="Saldo Bulan Ini" value={totalMasuk - totalKeluar} tone="green" />
       </div>
 
       <div className="panel-row">
         <div className="panel">
-          <div className="panel-title">Pengeluaran per kategori</div>
+          <div className="panel-title">Pengeluaran per Kategori</div>
           {loading ? null : pieData.length === 0 ? (
             <div className="empty-mini">Belum ada pengeluaran bulan ini.</div>
 			) : (
             <>
-              <ResponsiveContainer width="100%" height={280}>
+              <ResponsiveContainer width="100%" height={240}>
                 <PieChart>
-                  <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={48} outerRadius={78} paddingAngle={1}>
+                  <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={48} outerRadius={82} paddingAngle={1}>
                     {pieData.map((_, i) => <Cell key={i} fill={PALET[i % PALET.length]} />)}
                   </Pie>
                   <Tooltip formatter={(v) => rupiah(v)} />
@@ -162,8 +162,8 @@ function Ringkasan({ curMonth, setCurMonth }) {
         </div>
 
         <div className="panel">
-          <div className="panel-title">Tren 6 bulan terakhir</div>
-          <ResponsiveContainer width="100%" height={260}>
+          <div className="panel-title">Tren 6 Bulan Terakhir</div>
+          <ResponsiveContainer width="100%" height={230}>
             <ComposedChart data={trend} margin={{ top: 5, right: 10, bottom: 15, left: 10 }}>
               <CartesianGrid stroke="#E4E4E4" vertical={false} />
               <XAxis dataKey="bulan" tick={{ fontSize: 12 }} axisLine={{ stroke: "#B8B8B8" }} tickLine={false} />
@@ -241,15 +241,15 @@ function Transaksi({ kategoriMap }) {
           {semuaKategori.map((k) => <option key={k} value={k}>{k}</option>)}
         </select>
         <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="field" style={{ width: 220 }}>
-          <option value="tanggalDesc">Tanggal terbaru</option>
-          <option value="tanggalAsc">Tanggal terlama</option>
-          <option value="jumlahDesc">Jumlah tertinggi</option>
-          <option value="jumlahAsc">Jumlah terendah</option>
+          <option value="tanggalDesc">Tanggal Terbaru</option>
+          <option value="tanggalAsc">Tanggal Terlama</option>
+          <option value="jumlahDesc">Jumlah Tertinggi</option>
+          <option value="jumlahAsc">Jumlah Terendah</option>
         </select>
         <select value={pagination.limit} onChange={(e) => setPagination(prev => ({ ...prev, limit: parseInt(e.target.value), page: 1 }))} className="field" style={{ width: 120 }}>
-          <option value="10">10/Halaman</option>
-          <option value="20">20/Halaman</option>
-          <option value="50">50/Halaman</option>
+          <option value="10">10 Transaksi</option>
+          <option value="20">20 Transaksi</option>
+          <option value="50">50 Transaksi</option>
         </select>
         <span className="filter-count">{pagination.total} entri (hal {pagination.page}/{pagination.totalPages})</span>
       </div>
@@ -374,10 +374,10 @@ function Tambah({ kategoriMap, onSaved }) {
 
   return (
     <div className="page">
-      <div className="page-head"><h2>Tambah transaksi</h2></div>
+      <div className="page-head"><h2>Tambah Transaksi</h2></div>
       <div className="panel-row">
         <div className="panel">
-          <div className="panel-title">Tambah cepat</div>
+          <div className="panel-title">Tambah Cepat</div>
           <p className="panel-hint">Ketik seperti chat biasa, mis. &quot;bakso 15rb sama es teh 5rb&quot;.</p>
           <form onSubmit={submitQuick} className="quick-form">
             <textarea value={teks} onChange={(e) => setTeks(e.target.value)} placeholder="50000 beli bakso" rows={3} className="field" />
@@ -387,7 +387,7 @@ function Tambah({ kategoriMap, onSaved }) {
           {quickOk && <div className="form-ok">{quickOk}</div>}
         </div>
         <div className="panel">
-          <div className="panel-title">Form terstruktur</div>
+          <div className="panel-title">Form Terstruktur</div>
           <form onSubmit={submitForm} className="struct-form">
             <label>Jenis
               <select value={jenis} onChange={(e) => { setJenis(e.target.value); setKategori((e.target.value === "pemasukan" ? kategoriMap.pemasukan : kategoriMap.pengeluaran)[0] || ""); }} className="field">
@@ -405,7 +405,7 @@ function Tambah({ kategoriMap, onSaved }) {
             <label>Deskripsi<input value={deskripsi} onChange={(e) => setDeskripsi(e.target.value)} placeholder="opsional" className="field" /></label>
             {formErr && <div className="form-error">{formErr}</div>}
             {formOk && <div className="form-ok">{formOk}</div>}
-            <button type="submit" className="btn-primary" disabled={loadingForm}>{loadingForm ? "Menyimpan…" : "Simpan transaksi"}</button>
+            <button type="submit" className="btn-primary" disabled={loadingForm}>{loadingForm ? "Menyimpan…" : "Simpan Transaksi"}</button>
           </form>
         </div>
       </div>
@@ -582,11 +582,13 @@ export default function DashboardClient() {
         <div className="sidebar-foot">Data tersimpan di Google Sheets.</div>
       </aside>
       <main className="content">
-        {tab === "ringkasan" && <Ringkasan key={refreshKey} curMonth={curMonth} setCurMonth={setCurMonth} />}
-        {tab === "transaksi" && <Transaksi key={refreshKey} kategoriMap={kategoriMap} />}
-        {tab === "tambah" && <Tambah kategoriMap={kategoriMap} onSaved={() => setRefreshKey((k) => k + 1)} />}
-        {tab === "analisis" && <AnalisisAI curMonth={curMonth} />}
-        {tab === "pengaturan" && <Pengaturan />}
+        <div className="content-inner">
+          {tab === "ringkasan" && <Ringkasan key={refreshKey} curMonth={curMonth} setCurMonth={setCurMonth} />}
+          {tab === "transaksi" && <Transaksi key={refreshKey} kategoriMap={kategoriMap} />}
+          {tab === "tambah" && <Tambah kategoriMap={kategoriMap} onSaved={() => setRefreshKey((k) => k + 1)} />}
+          {tab === "analisis" && <AnalisisAI curMonth={curMonth} />}
+          {tab === "pengaturan" && <Pengaturan />}
+        </div>
       </main>
     </div>
   );
