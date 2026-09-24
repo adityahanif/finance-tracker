@@ -233,6 +233,12 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 /* Tooltip chart (hover pie/bar) — compact */
 .recharts-tooltip-wrapper { outline: none; }
+/* Hilangkan kotak hitam/focus ring pada elemen Recharts */
+.recharts-wrapper,
+.recharts-wrapper svg,
+.recharts-wrapper svg * {
+  outline: none !important;
+}
 .recharts-default-tooltip {
   background: #fff !important;
   border: 1px solid var(--rule) !important;
