@@ -184,6 +184,8 @@ function Ringkasan({ curMonth, setCurMonth }) {
 function Transaksi({ kategoriMap }) {
   const [bulan, setBulan] = useState(monthKeyOf(todayStr()));
   const [kategoriFilter, setKategoriFilter] = useState("Semua");
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [transaksi, setTransaksi] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 1, hasMore: false });
   const [editId, setEditId] = useState(null);
@@ -192,23 +194,29 @@ function Transaksi({ kategoriMap }) {
   const [hapusLoadingId, setHapusLoadingId] = useState(null);
   const [sortBy, setSortBy] = useState("tanggalDesc");
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
   const muat = useCallback(async () => {
     try {
       const params = new URLSearchParams({ bulan, page: pagination.page, limit: pagination.limit, sortBy });
       if (kategoriFilter !== "Semua") params.append("kategori", kategoriFilter);
+      if (debouncedSearch.trim()) params.append("search", debouncedSearch.trim());
       const d = await api(`/api/transactions?${params}`);
       setTransaksi(d.transaksi || []);
       setPagination(d.pagination || { page: 1, limit: 20, total: 0, totalPages: 1, hasMore: false });
     } catch (e) {
       setHapusErr(e.message);
     }
-  }, [bulan, pagination.page, pagination.limit, sortBy, kategoriFilter]);
+  }, [bulan, pagination.page, pagination.limit, sortBy, kategoriFilter, debouncedSearch]);
 
   useEffect(() => { muat(); }, [muat]);
 
   useEffect(() => {
     setPagination(prev => ({ ...prev, page: 1 }));
-  }, [bulan, kategoriFilter, sortBy]);
+  }, [bulan, kategoriFilter, sortBy, debouncedSearch]);
 
   const semuaKategori = ["Semua", ...kategoriMap.pengeluaran, ...kategoriMap.pemasukan.filter((k) => !kategoriMap.pengeluaran.includes(k))];
 
@@ -251,6 +259,14 @@ function Transaksi({ kategoriMap }) {
           <option value="20">20 Transaksi</option>
           <option value="50">50 Transaksi</option>
         </select>
+        <input
+          type="search"
+          placeholder="Cari transaksi..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="field"
+          style={{ width: 180 }}
+        />
         <span className="filter-count">{pagination.total} entri (hal {pagination.page}/{pagination.totalPages})</span>
       </div>
 

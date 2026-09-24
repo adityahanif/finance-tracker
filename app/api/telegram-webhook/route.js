@@ -141,12 +141,15 @@ async function handleEdit(chatId, rawText) {
 }
 
 async function handlePesanBebas(chatId, teks) {
-  const kategoriMap = await getCategories();
-  const model = await getSetting("gemini_parse_model", process.env.GEMINI_PARSE_MODEL || "gemini-3.5-flash-lite");
+  const [kategoriMap, model, semua] = await Promise.all([
+    getCategories(),
+    getSetting("gemini_parse_model", process.env.GEMINI_PARSE_MODEL || "gemini-3.5-flash-lite"),
+    getAllTransactions().catch(() => []),
+  ]);
 
   let hasil;
   try {
-    hasil = await parseFreeText(teks, kategoriMap, model);
+    hasil = await parseFreeText(teks, kategoriMap, model, null, semua);
   } catch (err) {
     return sendMessage(chatId, "Gagal memproses pesan, coba lagi sebentar lagi.");
   }

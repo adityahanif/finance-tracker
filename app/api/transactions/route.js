@@ -10,6 +10,7 @@ export async function GET(req) {
   const from = searchParams.get("from"); // format YYYY-MM, opsional (inklusif)
   const to = searchParams.get("to"); // format YYYY-MM, opsional (inklusif)
   const kategori = searchParams.get("kategori");
+  const search = (searchParams.get("search") || searchParams.get("q"))?.trim().toLowerCase();
   const page = parseInt(searchParams.get("page")) || 1;
   const limit = parseInt(searchParams.get("limit")) || 20;
   const sortBy = searchParams.get("sortBy") || "tanggalDesc";
@@ -35,6 +36,14 @@ export async function GET(req) {
     // filter kategori jika disediakan
     if (kategori) {
       data = data.filter((t) => t.kategori === kategori);
+    }
+
+    if (search) {
+      data = data.filter((t) =>
+        (t.deskripsi && t.deskripsi.toLowerCase().includes(search)) ||
+        (t.kategori && t.kategori.toLowerCase().includes(search)) ||
+        String(t.jumlah).includes(search)
+      );
     }
 
     // sorting

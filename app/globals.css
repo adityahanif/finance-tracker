@@ -115,7 +115,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .panel-hint { font-size: 12px; color: var(--rule-dark); margin: 0 0 var(--space-sm); line-height: 1.4; }
 .empty-mini { font-size: 13px; color: var(--rule-dark); padding: 30px 0; text-align: center; }
 
-.filter-row { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md); }
+.filter-row { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md); flex-wrap: wrap; }
 .filter-count { font-size: 12px; color: var(--rule-dark); margin-left: auto; font-weight: 500; }
 
 .pagination {

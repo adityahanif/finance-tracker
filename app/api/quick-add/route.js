@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { parseFreeText } from "../../../lib/gemini";
 import {
   appendTransaction, clearCachedAnalysis, monthKeyOf,
-  getCategories, getSetting,
+  getCategories, getSetting, getAllTransactions,
 } from "../../../lib/sheets";
 import { kategoriValid } from "../../../lib/categories";
 import { randomUUID } from "crypto";
@@ -13,12 +13,15 @@ export async function POST(req) {
     return NextResponse.json({ error: "Teks tidak boleh kosong." }, { status: 400 });
   }
 
-  const kategoriMap = await getCategories();
-  const model = await getSetting("gemini_parse_model", process.env.GEMINI_PARSE_MODEL || "gemini-3.5-flash-lite");
+  const [kategoriMap, model, semua] = await Promise.all([
+    getCategories(),
+    getSetting("gemini_parse_model", process.env.GEMINI_PARSE_MODEL || "gemini-3.5-flash-lite"),
+    getAllTransactions().catch(() => []),
+  ]);
 
   let hasil;
   try {
-    hasil = await parseFreeText(text.trim(), kategoriMap, model);
+    hasil = await parseFreeText(text.trim(), kategoriMap, model, null, semua);
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
