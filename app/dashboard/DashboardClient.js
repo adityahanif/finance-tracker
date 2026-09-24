@@ -438,6 +438,7 @@ function AnalisisAI({ curMonth }) {
   const [teks, setTeks] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [prompt, setPrompt] = useState("");
 
   useEffect(() => {
     setLoading(true); setTeks(null);
@@ -446,8 +447,9 @@ function AnalisisAI({ curMonth }) {
 
   const jalankan = async () => {
     setLoading(true); setErr("");
+    setPrompt("");
     try {
-      const d = await api("/api/analysis", { method: "POST", body: JSON.stringify({ bulan: curMonth }) });
+      const d = await api("/api/analysis", { method: "POST", body: JSON.stringify({ bulan: curMonth, prompt }) });
       setTeks(d.teks);
     } catch (e) {
       setErr(e.message);
@@ -460,20 +462,30 @@ function AnalisisAI({ curMonth }) {
     <div className="page">
       <div className="page-head"><h2>Analisis AI — {labelBulan(curMonth)}</h2></div>
       <div className="panel analysis-panel">
-        {loading ? null : teks ? (
-          <>
-			<div className="analysis-text">
-				<ReactMarkdown>{teks}</ReactMarkdown>
-			</div>
-            <button className="btn-secondary" onClick={jalankan}>Buat ulang analisis</button>
-          </>
+        <textarea
+          className="field"
+          rows={3}
+          placeholder="Misal: Bagaimana status kesehatan finansial? Apa saja yang perlu dipangkas? dll (kosongkan untuk analisis default)"
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          style={{ marginBottom: 12, resize: "vertical" }}
+          disabled={loading}
+        />
+        {teks ? (
+          <button className="btn-secondary" onClick={jalankan} disabled={loading}>
+            {loading ? "⏳ Sedang menganalisis…" : "Buat ulang analisis"}
+          </button>
         ) : (
-          <>
-            <p className="panel-hint">Ringkas pola pengeluaran bulan ini dibanding bulan lalu, dan dapatkan saran singkat.</p>
-            <button className="btn-primary" onClick={jalankan}>Jalankan Analisis AI</button>
-          </>
+          <button className="btn-primary" onClick={jalankan} disabled={loading}>
+            {loading ? "⏳ Sedang menganalisis…" : "Jalankan Analisis AI"}
+          </button>
         )}
         {err && <div className="form-error">{err}</div>}
+        {!loading && teks && (
+          <div className="analysis-text" style={{ marginTop: 16 }}>
+            <ReactMarkdown>{teks}</ReactMarkdown>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -554,7 +566,7 @@ function Pengaturan() {
 
       <div className="panel" style={{ maxWidth: 480 }}>
         <div className="panel-title">Model Gemini</div>
-        <p className="panel-hint">Nama model harus sesuai yang tersedia untuk API key kamu (cek di Google AI Studio).</p>
+        <p className="panel-hint">Pilihan model: gemini-2-flash; gemini-2-flash-lite; gemini-3-flash; gemini-3.1-flash-lite; gemini-3.5-flash; gemini-3.5-flash-lite; gemini-3.6-flash; gemini-3.7-flash; gemini-3.8-flash</p>
         {loading ? null : (
           <form onSubmit={simpan} className="struct-form">
             <label>Model untuk parsing pesan

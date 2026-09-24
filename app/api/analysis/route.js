@@ -47,13 +47,13 @@ export async function GET(req) {
 }
 
 export async function POST(req) {
-  const { bulan } = await req.json().catch(() => ({}));
+  const { bulan, prompt } = await req.json().catch(() => ({}));
   if (!bulan) return NextResponse.json({ error: "Parameter 'bulan' wajib diisi." }, { status: 400 });
 
   try {
     const agregat = await buildAggregate(bulan);
     const model = await getSetting("gemini_analysis_model", process.env.GEMINI_ANALYSIS_MODEL || "gemini-3.8-flash");
-    const teks = await generateAnalysis(agregat, model);
+    const teks = await generateAnalysis(agregat, model, prompt);
     await setCachedAnalysis(bulan, teks);
     return NextResponse.json({ teks });
   } catch (err) {
