@@ -124,13 +124,13 @@ Semua response JSON. Error: `{ error: "pesan Bahasa Indonesia" }`.
 |---|---|---|---|---|
 | `POST /api/auth` | tidak | `{ pin }` | `200 { ok:true }` + set cookie | Gagal → 401 pesan generik (tanpa sisa percobaan) |
 | `POST /api/telegram-webhook` | `x-telegram-bot-api-secret-token` == `TELEGRAM_WEBHOOK_SECRET` | Update Telegram | `{ ok:true }` | Selalu 200 ke Telegram kecuali secret salah (401); error bisnis dibalas sebagai chat |
-| `GET /api/transactions?bulan=YYYY-MM` | PIN | query opsional (`bulan` / `months` / `from`+`to`) | `{ transaksi: [] }` desc by tanggal | `proxy.js` |
+| `GET /api/transactions?bulan=YYYY-MM` | PIN | query opsional (`bulan` / `months` / `from`+`to` / `kategori` / `search`) | `{ transaksi: [], pagination }` desc by tanggal | `proxy.js` |
 | `POST /api/transactions` | PIN | `{ tanggal, jenis, jumlah, kategori, deskripsi }` | `201 { transaksi }` | Validasi FR-20; tanpa AI |
 | `PATCH /api/transactions/[id]` | PIN | partial `{ tanggal, jenis, jumlah, kategori, deskripsi }` | `{ transaksi }` | Invalidasi cache bulan lama+baru |
 | `DELETE /api/transactions/[id]` | PIN | — | `{ ok:true }` | Hapus baris via `deleteDimension` |
 | `POST /api/quick-add` | PIN | `{ text }` | `201 { transaksi: [] }` | Ambigu → 422 + pesan klarifikasi; `jumlah<=0` → 422 |
 | `GET /api/analysis?bulan=YYYY-MM` | PIN | query | `{ teks: string\|null, updated_at }` | Baca cache saja, tidak generate |
-| `POST /api/analysis` | PIN | `{ bulan }` | `{ teks }` | Generate dari agregat + simpan cache |
+| `POST /api/analysis` | PIN | `{ bulan, prompt? }` | `{ teks }` | Generate dari agregat + simpan cache; `prompt` opsional untuk kustomisasi analisis |
 | `GET /api/categories` | PIN | — | `{ pengeluaran: [], pemasukan: [] }` | Dari Sheets + fallback |
 | `GET /api/settings` | PIN | — | `{ gemini_parse_model, gemini_analysis_model }` | Dari Sheets/env |
 | `POST /api/settings` | PIN | `{ gemini_parse_model?, gemini_analysis_model? }` | `{ ok:true }` | Ganti model tanpa deploy |
@@ -156,19 +156,22 @@ Semua response JSON. Error: `{ error: "pesan Bahasa Indonesia" }`.
 ## 7. AI Integration (`lib/gemini.js`)
 
 - Transport: `fetch` ke `.../v1beta/models/{model}:generateContent?key=...`, `temperature: 0.2`.
-- **`parseFreeText(teks, kategoriMap, model)`** — prompt ID: parsing jumlah informal (`15rb/5k/50.000` → angka murni), default tanggal hari ini (Asia/Jakarta), kategori dibatasi ke daftar dinamis, output **hanya JSON** `{ transaksi[], error }`. `extractJson()` toleran terhadap code fence. Gagal parse → error klarifikasi ramah.
-- **`generateAnalysis(aggregate, model)`** — input **agregat** (bukan raw transaksi, hemat token): per-kategori bulan berjalan vs sebelumnya + total. Output teks bebas 5–6 kalimat: delta signifikan, anomali, 1 saran praktis.
+- **`parseFreeText(teks, kategoriMap, model, fallbackModel, riwayat)`** — prompt ID: parsing jumlah informal (`15rb/5k/50.000` → angka murni), default tanggal hari ini (Asia/Jakarta), kategori dibatasi ke daftar dinamis, output **hanya JSON** `{ transaksi[], error }`. `extractJson()` toleran terhadap code fence. Gagal parse → error klarifikasi ramah. **Few-shot dari histori:** 30 transaksi terakhir unik (deskripsi → kategori) disisipkan ke prompt sebagai contoh preferensi user; model otomatis mengikuti pola edit sebelumnya (mis. "parkir" → "Lainnya").
+- **`generateAnalysis(aggregate, model, customPrompt)`** — input **agregat** (bukan raw transaksi, hemat token): per-kategori bulan berjalan vs sebelumnya + total. Output teks bebas 5–6 kalimat: delta signifikan, anomali, 1 saran praktis. **Prompt custom opsional** dari dashboard ditambahkan ke konteks tetap (data keuangan + peran asisten). Instruksi mutlak: **HANYA analisis data keuangan**, tolak topik di luar konteks (resep masak, cerita, dll).
 - **Model configurable:** `getSetting("gemini_parse_model" / "gemini_analysis_model", env fallback)` → ganti dari tab Pengaturan dashboard.
+- **Pesan error rate-limit lebih spesifik:**
+  - RPM/TPM (429): "Batas pemakaian AI tercapai. Tunggu 1–5 menit lalu coba lagi."
+  - RPD (daily quota): "Batas pemakaian harian AI tercapai. Coba lagi besok."
 
 ## 8. Frontend Design (`DashboardClient.js` + `globals.css`)
 
 Tab tunggal dengan sidebar: **Ringkasan | Transaksi | Tambah | Analisis AI | Pengaturan**.
 
 - **Ringkasan:** `MonthNav` (‹ ›, next disabled untuk bulan kini/masa depan), 3 `StatCard` (Pemasukan/blue, Pengeluaran/brick, Saldo/green), Donut `Pie` pengeluaran/kategori (inner 48/outer 78) + `PieLegend` (% 2 desimal), `ComposedChart` tren 6 bulan (Bar hijau/merah; Y-axis `jt` untuk jutaan). Agregasi client-side dari `GET /api/transactions` penuh.
-- **Transaksi:** filter `input[type=month]` + dropdown kategori, sort desc tanggal, inline edit row (ganti jenis → reset kategori ke opsi pertama), hapus dengan `confirm()`, label sumber (`Telegram/Tambah cepat/Form`), pill jenis + nominal `+Rp/-Rp` berwarna.
+- **Transaksi:** filter `input[type=month]` + dropdown kategori, **pencarian teks (deskripsi/kategori/jumlah), sort, pagination**, inline edit row (ganti jenis → reset kategori ke opsi pertama), hapus dengan `confirm()`, label sumber (`Telegram/Tambah cepat/Form`), pill jenis + nominal `+Rp/-Rp` berwarna.
 - **Tambah:** dua panel — *Tambah cepat* (textarea + AI) dan *Form terstruktur* (jenis/tanggal/jumlah/kategori/deskripsi, tanpa AI).
-- **Analisis AI:** GET cache per `curMonth`; tombol "Jalankan/Buat ulang"; render `ReactMarkdown`.
-- **Pengaturan:** form ganti PIN (validasi konfirmasi cocok di client) + form nama model Gemini.
+- **Analisis AI:** GET cache per `curMonth`; **field prompt opsional untuk kustomisasi analisis**; tombol "Jalankan/Buat ulang" selalu di bawah field; render `ReactMarkdown`; status loading di tombol.
+- **Pengaturan:** form ganti PIN (validasi konfirmasi cocok di client) + form nama model Gemini (+ daftar model alternatif).
 - **Tema:** putih kertas dengan texture noise sangat halus, font Arial/Helvetica dengan improved typography scale, border tipis dengan konsisten radius, sidebar 240px (collapse ke topbar di ≤760px), palet 13 warna pie, format `Rp + id-ID locale`. Elevation shadow subtle untuk cards dan panels, hover states untuk interaksi, focus visible untuk aksesibilitas keyboard.
 
 **Catatan desain / tech debt yang diketahui:**
@@ -176,6 +179,7 @@ Tab tunggal dengan sidebar: **Ringkasan | Transaksi | Tambah | Analisis AI | Pen
 2. `TELEGRAM_ALLOWED_USERNAMES` kosong = bot terbuka publik (fail-open). Pertimbangkan fail-closed setelah username diset sekali.
 3. Belum ada rate-limit PIN & paginasi tabel (client load seluruh transaksi untuk Ringkasan — wajar untuk skala personal, tapi perlu virtualisasi jika >ribuan baris).
 4. Analisis hanya total + per-kategori; belum ada deteksi anomali statistik.
+5. ~~Kolom "Sumber" di row edit menampilkan nilai raw (`telegram`/`website_quick_add`/`website_form`) bukan label ramah~~ — sudah diperbaiki: row edit pakai logika label sama dengan row normal (`Telegram`/`Tambah cepat`/`Form`).
 
 ## 9. Caching & Konsistensi
 

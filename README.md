@@ -12,15 +12,17 @@ Google Sheets, parsing & analisis pakai Gemini.
 - Dashboard web dengan proteksi PIN (session 30 menit, cookie httpOnly).
 - Form input terstruktur (tanpa panggilan AI) + "Tambah Cepat" teks bebas
   (dengan AI, endpoint sama dengan bot).
-- Tabel transaksi dengan filter bulan/kategori, edit & hapus.
+- Tabel transaksi dengan **filter bulan/kategori, pencarian (deskripsi/kategori/jumlah), sort, pagination**, edit & hapus.
 - Ringkasan bulan berjalan, grafik pie per kategori, grafik tren 6 bulan
   (bar + trendline halus, hijau = pemasukan, merah = pengeluaran).
 - Analisis AI dengan cache (disimpan di sheet `AnalisisCache`, tidak
-  digenerate ulang kecuali diminta atau data bulan itu berubah).
+  digenerate ulang kecuali diminta atau data bulan itu berubah). **Prompt analisis bisa dikustomisasi dari dashboard** (field opsional di tab Analisis AI).
 - **Kategori dinamis** — dikelola lewat tab `Kategori` di spreadsheet, tidak
   hardcode di kode. Menambah/mengubah kategori tidak perlu deploy ulang.
 - **Model Gemini bisa diganti dari dashboard** (tab "Pengaturan") tanpa
   ubah kode atau deploy ulang — disimpan di tab `Pengaturan` di spreadsheet.
+- **Few-shot learning dari histori transaksi** — AI belajar preferensi kategori user dari edit sebelumnya (mis. "parkir" → "Lainnya" bukan "Transportasi") tanpa konfigurasi manual.
+- **Pesan error AI lebih informatif** — bedakan rate-limit per menit (RPM/TPM) vs harian (RPD).
 
 ## 1. Siapkan Google Sheets
 
