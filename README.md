@@ -98,13 +98,10 @@ app/
     categories/route.js         → GET daftar kategori (dari tab Kategori)
     settings/route.js           → GET/POST nama model Gemini (dari tab Pengaturan)
 lib/
-  sheets.js      → semua akses baca/tulis Google Sheets (transaksi, kategori,
-                    pengaturan, cache analisis)
-  gemini.js      → pemanggilan model Gemini (parsing & analisis), model &
-                    kategori dikirim sebagai parameter, bukan hardcode
+  sheets.js      → semua akses baca/tulis Google Sheets (transaksi, kategori, pengaturan, cache analisis)
+  gemini.js      → pemanggilan model Gemini (parsing & analisis), model & kategori dikirim sebagai parameter, bukan hardcode
   auth.js        → sesi JWT untuk PIN
   categories.js  → hanya fallback statis + fungsi validasi kategoriValid()
-middleware.js    → proteksi PIN untuk /dashboard & semua API terkait (Next 16: lihat proxy.js)
 ```
 
 ## Catatan
