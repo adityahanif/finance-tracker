@@ -297,7 +297,7 @@ function Transaksi({ kategoriMap }) {
                       </select>
                     </td>
                     <td><input value={editDraft.deskripsi} onChange={(e) => setEditDraft({ ...editDraft, deskripsi: e.target.value })} className="field sm" /></td>
-                    <td className="muted">{editDraft.sumber_input}</td>
+                    <td className="muted">{editDraft.sumber_input === "telegram" ? "Telegram" : editDraft.sumber_input === "website_quick_add" ? "Tambah cepat" : "Form"}</td>
                     <td><input type="number" value={editDraft.jumlah} onChange={(e) => setEditDraft({ ...editDraft, jumlah: Number(e.target.value) })} className="field sm num" /></td>
                     <td>
                       <div className="row-actions">
