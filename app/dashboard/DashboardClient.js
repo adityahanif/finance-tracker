@@ -6,7 +6,7 @@ import {
   XAxis, YAxis, Tooltip, CartesianGrid, Legend,
 } from "recharts";
 
-const PALET = ["#2563eb", "#dc2626", "#16a34a", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4", "#111827", "#f97316", "#6366f1", "#14b8a6", "#f43f5e", "#3b82f6"];
+const PALET = ["#16a34a", "#2563eb", "#dc2626", "#f59e0b", "#8b5cf6", "#ec4899", "#06b6d4", "#111827", "#f97316", "#6366f1", "#14b8a6", "#f43f5e", "#3b82f6"];
 const WARNA_PEMASUKAN = "#16a34a"; // green
 const WARNA_PENGELUARAN = "#dc2626"; // red
 const BULAN_ID = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
@@ -71,6 +71,7 @@ function Ringkasan({ curMonth, setCurMonth }) {
   const [transaksi, setTransaksi] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadErr, setLoadErr] = useState("");
+  const [pieJenis, setPieJenis] = useState("pengeluaran");
 
   // Hanya fetch jendela 6 bulan yang dibutuhkan tren + bulan aktif,
   // bukan seluruh riwayat (hemat transfer untuk data >ribuan baris).
@@ -115,14 +116,14 @@ function Ringkasan({ curMonth, setCurMonth }) {
   
   const pieData = useMemo(() => {
   const map = {};
-  transaksiBulanIni.filter((t) => t.jenis === "pengeluaran").forEach((t) => {
+  transaksiBulanIni.filter((t) => t.jenis === pieJenis).forEach((t) => {
     map[t.kategori] = (map[t.kategori] || 0) + t.jumlah;
   });
   const total = Object.values(map).reduce((s, v) => s + v, 0);
   return Object.entries(map)
     .map(([name, value]) => ({ name, value, percent: total > 0 ? (value / total) * 100 : 0 }))
     .sort((a, b) => b.value - a.value);
-  }, [transaksiBulanIni]);
+  }, [transaksiBulanIni, pieJenis]);
 
   const isCurrentOrFuture = curMonth >= monthKeyOf(todayStr());
 
@@ -143,9 +144,15 @@ function Ringkasan({ curMonth, setCurMonth }) {
 
       <div className="panel-row">
         <div className="panel">
-          <div className="panel-title">Pengeluaran per Kategori</div>
+          <div className="panel-title pie-title">
+            <span>{pieJenis === "pengeluaran" ? "Pengeluaran" : "Pemasukan"} per Kategori</span>
+            <div className="pie-arrows">
+              <button type="button" title="Ganti jenis" onClick={() => setPieJenis(pieJenis === "pengeluaran" ? "pemasukan" : "pengeluaran")}>‹</button>
+              <button type="button" title="Ganti jenis" onClick={() => setPieJenis(pieJenis === "pengeluaran" ? "pemasukan" : "pengeluaran")}>›</button>
+            </div>
+          </div>
           {loading ? null : pieData.length === 0 ? (
-            <div className="empty-mini">Belum ada pengeluaran bulan ini.</div>
+            <div className="empty-mini">Belum ada {pieJenis} bulan ini.</div>
 			) : (
             <>
               <ResponsiveContainer width="100%" height={240}>
@@ -218,8 +225,6 @@ function Transaksi({ kategoriMap }) {
     setPagination(prev => ({ ...prev, page: 1 }));
   }, [bulan, kategoriFilter, sortBy, debouncedSearch]);
 
-  const semuaKategori = ["Semua", ...kategoriMap.pengeluaran, ...kategoriMap.pemasukan.filter((k) => !kategoriMap.pengeluaran.includes(k))];
-
   const startEdit = (t) => { setEditId(t.id); setEditDraft({ ...t }); };
   const saveEdit = async () => {
     await api(`/api/transactions/${editId}`, { method: "PATCH", body: JSON.stringify(editDraft) });
@@ -246,7 +251,13 @@ function Transaksi({ kategoriMap }) {
       <div className="filter-row">
         <input type="month" value={bulan} onChange={(e) => setBulan(e.target.value)} className="field" style={{ width: 160 }} />
         <select value={kategoriFilter} onChange={(e) => setKategoriFilter(e.target.value)} className="field" style={{ width: 200 }}>
-          {semuaKategori.map((k) => <option key={k} value={k}>{k}</option>)}
+          <option value="Semua">Semua</option>
+          <optgroup label="Pengeluaran">
+            {kategoriMap.pengeluaran.map((k) => <option key={"p-" + k} value={k}>{k}</option>)}
+          </optgroup>
+          <optgroup label="Pemasukan">
+            {kategoriMap.pemasukan.map((k) => <option key={"m-" + k} value={k}>{k}</option>)}
+          </optgroup>
         </select>
         <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="field" style={{ width: 220 }}>
           <option value="tanggalDesc">Tanggal Terbaru</option>
@@ -287,8 +298,8 @@ function Transaksi({ kategoriMap }) {
                     <td><input type="date" value={editDraft.tanggal} onChange={(e) => setEditDraft({ ...editDraft, tanggal: e.target.value })} className="field sm" /></td>
                     <td>
                       <select value={editDraft.jenis} onChange={(e) => setEditDraft({ ...editDraft, jenis: e.target.value, kategori: (e.target.value === "pemasukan" ? kategoriMap.pemasukan : kategoriMap.pengeluaran)[0] })} className="field sm">
-                        <option value="pengeluaran">pengeluaran</option>
-                        <option value="pemasukan">pemasukan</option>
+                        <option value="pengeluaran">Pengeluaran</option>
+                        <option value="pemasukan">Pemasukan</option>
                       </select>
                     </td>
                     <td>
@@ -309,7 +320,7 @@ function Transaksi({ kategoriMap }) {
                 ) : (
                   <tr key={t.id}>
                     <td>{t.tanggal}</td>
-                    <td><span className={"pill " + (t.jenis === "pemasukan" ? "pill-indigo" : "pill-rose")}>{t.jenis}</span></td>
+                    <td><span className={"pill " + (t.jenis === "pemasukan" ? "pill-indigo" : "pill-rose")} style={{ textTransform: "capitalize" }}>{t.jenis}</span></td>
                     <td>{t.kategori}</td>
                     <td className="desc-cell" title={t.deskripsi}>{t.deskripsi}</td>
                     <td className="muted">{t.sumber_input === "telegram" ? "Telegram" : t.sumber_input === "website_quick_add" ? "Tambah cepat" : "Form"}</td>
@@ -586,6 +597,102 @@ function Pengaturan() {
 }
 
 // ---------------------------------------------------------------------------
+function Kategori({ kategoriMap, onRefresh }) {
+  const [jenis, setJenis] = useState("pengeluaran");
+  const [nama, setNama] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  const [hapusLoading, setHapusLoading] = useState(null);
+
+  const tambah = async (e) => {
+    e.preventDefault();
+    setMsg(""); setErr("");
+    if (!nama.trim()) return setErr("Nama kategori tidak boleh kosong.");
+    setSaving(true);
+    try {
+      await api("/api/categories", { method: "POST", body: JSON.stringify({ jenis, kategori: nama }) });
+      setMsg(`Kategori "${nama.trim()}" ditambahkan.`);
+      setNama("");
+      onRefresh?.();
+    } catch (e2) {
+      setErr(e2.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const hapus = async (jenisKategori, namaKategori) => {
+    if (!window.confirm(`Yakin ingin menghapus kategori "${namaKategori}"?`)) return;
+    setMsg(""); setErr("");
+    setHapusLoading(namaKategori);
+    try {
+      await api(`/api/categories?jenis=${encodeURIComponent(jenisKategori)}&kategori=${encodeURIComponent(namaKategori)}`, { method: "DELETE" });
+      setMsg(`Kategori "${namaKategori}" dihapus.`);
+      onRefresh?.();
+    } catch (e2) {
+      setErr(e2.message);
+    } finally {
+      setHapusLoading(null);
+    }
+  };
+
+  const daftarList = [
+    ["pengeluaran", "Kategori Pengeluaran", kategoriMap.pengeluaran],
+    ["pemasukan", "Kategori Pemasukan", kategoriMap.pemasukan],
+  ];
+
+  return (
+    <div className="page">
+      <div className="page-head"><h2>Kategori</h2></div>
+
+      <div className="panel" style={{ maxWidth: 480 }}>
+        <div className="panel-title">Tambah Kategori</div>
+        <form onSubmit={tambah} className="filter-row" style={{ marginBottom: 0 }}>
+          <select value={jenis} onChange={(e) => setJenis(e.target.value)} className="field" style={{ width: 170 }}>
+            <option value="pengeluaran">Pengeluaran</option>
+            <option value="pemasukan">Pemasukan</option>
+          </select>
+          <input
+            value={nama}
+            onChange={(e) => setNama(e.target.value)}
+            placeholder="Nama kategori baru"
+            className="field"
+            style={{ flex: 1, minWidth: 140 }}
+          />
+          <button type="submit" className="btn-primary" disabled={saving}>{saving ? "Menyimpan…" : "Tambah"}</button>
+        </form>
+      </div>
+
+      {err && <div className="form-error" style={{ marginTop: 12 }}>{err}</div>}
+      {msg && <div className="form-ok" style={{ marginTop: 12 }}>{msg}</div>}
+
+      <div className="panel-row" style={{ marginTop: 16 }}>
+        {daftarList.map(([key, judul, daftar]) => (
+          <div className="panel" key={key}>
+            <div className="panel-title">{judul} <span className="pill pill-indigo">{daftar.length}</span></div>
+            {daftar.length === 0 ? (
+              <div className="empty-mini">Belum ada kategori.</div>
+            ) : (
+              <div className="chip-list">
+                {daftar.map((k) => (
+                  <span key={k} className={"chip pill-" + (key === "pengeluaran" ? "rose" : "indigo")}>
+                    {k}
+                    <button type="button" onClick={() => hapus(key, k)} disabled={hapusLoading === k} title="Hapus kategori">
+                      {hapusLoading === k ? "…" : "×"}
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 export default function DashboardClient() {
   const [tab, setTab] = useState("ringkasan");
   const [curMonth, setCurMonth] = useState(monthKeyOf(todayStr()));
@@ -607,7 +714,7 @@ export default function DashboardClient() {
           </div>
         </div>
         <nav className="tabs">
-          {[["ringkasan", "Ringkasan"], ["transaksi", "Transaksi"], ["tambah", "Tambah"], ["analisis", "Analisis AI"], ["pengaturan", "Pengaturan"]].map(([k, label]) => (
+          {[["ringkasan", "Ringkasan"], ["transaksi", "Transaksi"], ["tambah", "Tambah"], ["analisis", "Analisis"], ["kategori", "Kategori"], ["pengaturan", "Pengaturan"]].map(([k, label]) => (
             <button key={k} className={"tab" + (tab === k ? " active" : "")} onClick={() => setTab(k)}>{label}</button>
           ))}
         </nav>
@@ -619,6 +726,7 @@ export default function DashboardClient() {
           {tab === "transaksi" && <Transaksi key={refreshKey} kategoriMap={kategoriMap} />}
           {tab === "tambah" && <Tambah kategoriMap={kategoriMap} onSaved={() => setRefreshKey((k) => k + 1)} />}
           {tab === "analisis" && <AnalisisAI curMonth={curMonth} />}
+          {tab === "kategori" && <Kategori key={refreshKey} kategoriMap={kategoriMap} onRefresh={() => setRefreshKey((k) => k + 1)} />}
           {tab === "pengaturan" && <Pengaturan />}
         </div>
       </main>

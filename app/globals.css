@@ -164,6 +164,29 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .row-actions { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; vertical-align: middle; }
 .row-actions button { border: none; background: transparent; cursor: pointer; opacity: 0.6; padding: 2px 4px; border-radius: var(--radius-sm); transition: background-color 0.15s ease, opacity 0.15s ease; font-size: 14px; line-height: 1; }
 .row-actions button:hover { opacity: 1; background: rgba(0,0,0,0.05); }
+.chip-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 12px; padding: 3px 5px 3px 10px; border-radius: 20px;
+  font-weight: 500; line-height: 1.4;
+}
+.chip button {
+  border: none; background: transparent; cursor: pointer; color: inherit;
+  opacity: 0.55; padding: 0 2px; font-size: 13px; line-height: 1; border-radius: 50%;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+.chip button:hover:not(:disabled) { opacity: 1; background: rgba(0,0,0,0.08); }
+.chip button:disabled { opacity: 0.3; cursor: not-allowed; }
+.pie-title { display: flex; align-items: center; gap: var(--space-sm); }
+.pie-title span { flex: 1; min-width: 0; }
+.pie-arrows { display: flex; gap: 4px; flex: none; }
+.pie-arrows button {
+  border: 1px solid var(--rule-dark); background: #fff; cursor: pointer;
+  width: 24px; height: 24px; border-radius: var(--radius-sm); font-size: 13px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.pie-arrows button:hover { border-color: var(--green); background: rgba(1,117,21,0.06); }
 .editing-row td { background: rgba(1,117,21,0.05); }
 
 .quick-form, .struct-form { display: flex; flex-direction: column; gap: var(--space-lg); }

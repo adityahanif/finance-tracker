@@ -42,6 +42,7 @@ export async function GET(req) {
       data = data.filter((t) =>
         (t.deskripsi && t.deskripsi.toLowerCase().includes(search)) ||
         (t.kategori && t.kategori.toLowerCase().includes(search)) ||
+        t.jenis.toLowerCase().includes(search) ||
         String(t.jumlah).includes(search)
       );
     }
