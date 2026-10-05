@@ -153,6 +153,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .ledger-table td { padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--rule); vertical-align: middle; }
 .ledger-table tr:last-child td { border-bottom: none; }
 .ledger-table tr:hover td { background: rgba(1,117,21,0.03); }
+.ledger-table tfoot td { border-top: 2px solid var(--ink); border-bottom: none; background: transparent; }
+.ledger-table tfoot tr:hover td { background: transparent; }
 .desc-cell { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .amount-cell { white-space: nowrap; }
 .muted { color: var(--rule-dark); font-size: 12px; }

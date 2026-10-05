@@ -58,17 +58,23 @@ export async function GET(req) {
 
     // pagination
     const total = data.length;
-    const start = (page - 1) * limit;
+    const totalMasuk = data.filter((t) => t.jenis === "pemasukan").reduce((s, t) => s + t.jumlah, 0);
+    const totalKeluar = data.filter((t) => t.jenis === "pengeluaran").reduce((s, t) => s + t.jumlah, 0);
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    const safePage = Math.min(Math.max(1, page), totalPages); // clamp: page > totalPages → halaman terakhir
+    const start = (safePage - 1) * limit;
     const end = start + limit;
     const paginated = data.slice(start, end);
 
     return NextResponse.json({
       transaksi: paginated,
+      total_pemasukan: totalMasuk,
+      total_pengeluaran: totalKeluar,
       pagination: {
-        page,
+        page: safePage,
         limit,
         total,
-        totalPages: Math.max(1, Math.ceil(total / limit)),
+        totalPages,
         hasMore: end < total,
       },
     });

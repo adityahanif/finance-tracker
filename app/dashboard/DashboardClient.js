@@ -1,6 +1,6 @@
 "use client";
 import ReactMarkdown from "react-markdown";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, ComposedChart, Bar, Line,
   XAxis, YAxis, Tooltip, CartesianGrid, Legend,
@@ -195,6 +195,8 @@ function Transaksi({ kategoriMap }) {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [transaksi, setTransaksi] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 1, hasMore: false });
+  const [totalMasuk, setTotal] = useState(0);
+  const [totalKeluar, setTotalKeluar] = useState(0);
   const [editId, setEditId] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
   const [hapusErr, setHapusErr] = useState("");
@@ -206,16 +208,22 @@ function Transaksi({ kategoriMap }) {
     return () => clearTimeout(t);
   }, [search]);
 
+  const reqIdRef = useRef(0);
+
   const muat = useCallback(async () => {
+    const reqId = ++reqIdRef.current;
     try {
       const params = new URLSearchParams({ bulan, page: pagination.page, limit: pagination.limit, sortBy });
       if (kategoriFilter !== "Semua") params.append("kategori", kategoriFilter);
       if (debouncedSearch.trim()) params.append("search", debouncedSearch.trim());
       const d = await api(`/api/transactions?${params}`);
+      if (reqId !== reqIdRef.current) return; // respon lama, abaikan (anti race)
       setTransaksi(d.transaksi || []);
       setPagination(d.pagination || { page: 1, limit: 20, total: 0, totalPages: 1, hasMore: false });
+      setTotal(d.total_pemasukan || 0);
+      setTotalKeluar(d.total_pengeluaran || 0);
     } catch (e) {
-      setHapusErr(e.message);
+      if (reqId === reqIdRef.current) setHapusErr(e.message);
     }
   }, [bulan, pagination.page, pagination.limit, sortBy, kategoriFilter, debouncedSearch]);
 
@@ -336,12 +344,26 @@ function Transaksi({ kategoriMap }) {
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan={5} style={{ textAlign: "right", fontWeight: 700 }}>Total</td>
+                  <td className="num amount-cell" style={{ fontWeight: 700 }}>
+                    {(() => {
+                      const net = totalMasuk - totalKeluar;
+                      return net >= 0 ? rupiah(net) : `(${rupiah(-net)})`;
+                    })()}
+                  </td>
+                  <td></td>
+                </tr>
+              </tfoot>
             </table>
             {pagination.totalPages > 1 && (
               <div className="pagination">
+                <button onClick={() => setPagination(prev => ({ ...prev, page: 1 }))} disabled={pagination.page === 1} title="Halaman pertama">«</button>
                 <button onClick={() => setPagination(prev => ({ ...prev, page: Math.max(1, prev.page - 1) }))} disabled={pagination.page === 1}>‹</button>
-                <span>{pagination.page} / {pagination.totalPages}</span>
+                <span>Hal {pagination.page} dari {pagination.totalPages}</span>
                 <button onClick={() => setPagination(prev => ({ ...prev, page: Math.min(pagination.totalPages, prev.page + 1) }))} disabled={pagination.page === pagination.totalPages}>›</button>
+                <button onClick={() => setPagination(prev => ({ ...prev, page: pagination.totalPages }))} disabled={pagination.page === pagination.totalPages} title="Halaman terakhir">»</button>
                 <span className="pagination-hint">({pagination.limit} per halaman)</span>
               </div>
             )}
