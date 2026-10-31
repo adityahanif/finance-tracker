@@ -44,6 +44,7 @@ export const config = {
     "/api/analysis",
     "/api/analysis/:path*",
     "/api/categories",
+    "/api/saldo-awal",
     "/api/settings",
     "/api/settings/:path*",
   ],

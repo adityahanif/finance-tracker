@@ -72,6 +72,13 @@ function Ringkasan({ curMonth, setCurMonth }) {
   const [loading, setLoading] = useState(true);
   const [loadErr, setLoadErr] = useState("");
   const [pieJenis, setPieJenis] = useState("pengeluaran");
+  // Saldo awal/akhir dihitung di server (lib/saldo.js) dari SELURUH riwayat,
+  // bukan dari jendela 6 bulan di bawah — supaya sisa bulan-bulan lama ikut.
+  const [saldo, setSaldo] = useState(null);
+  const [editSaldoAwal, setEditSaldoAwal] = useState(false);
+  const [saldoAwalInput, setSaldoAwalInput] = useState("");
+  const [saldoSaving, setSaldoSaving] = useState(false);
+  const [saldoErr, setSaldoErr] = useState("");
 
   // Hanya fetch jendela 6 bulan yang dibutuhkan tren + bulan aktif,
   // bukan seluruh riwayat (hemat transfer untuk data >ribuan baris).
@@ -113,7 +120,38 @@ function Ringkasan({ curMonth, setCurMonth }) {
 
   const totalMasuk = transaksiBulanIni.filter((t) => t.jenis === "pemasukan").reduce((s, t) => s + t.jumlah, 0);
   const totalKeluar = transaksiBulanIni.filter((t) => t.jenis === "pengeluaran").reduce((s, t) => s + t.jumlah, 0);
-  
+
+  useEffect(() => {
+    let cancelled = false;
+    setEditSaldoAwal(false);
+    setSaldoErr("");
+    api(`/api/saldo-awal?bulan=${curMonth}`)
+      .then((d) => { if (!cancelled) setSaldo(d); })
+      .catch(() => { if (!cancelled) setSaldo(null); });
+    return () => { cancelled = true; };
+  }, [curMonth]);
+
+  // Angka server didahulukan; fallback ke hitungan lokal selama API belum tiba.
+  // Saldo awal TIDAK ditambahkan ke totalMasuk — ia bukan pemasukan.
+  const saldoAwal = saldo ? saldo.saldo_awal : 0;
+  const tampilMasuk = saldo ? saldo.total_pemasukan : totalMasuk;
+  const tampilKeluar = saldo ? saldo.total_pengeluaran : totalKeluar;
+  const saldoAkhir = saldo ? saldo.saldo_akhir : saldoAwal + totalMasuk - totalKeluar;
+
+  const simpanSaldoAwal = async (nilai) => {
+    setSaldoSaving(true);
+    setSaldoErr("");
+    try {
+      const d = await api("/api/saldo-awal", { method: "POST", body: JSON.stringify({ bulan: curMonth, saldo_awal: nilai }) });
+      setSaldo(d);
+      setEditSaldoAwal(false);
+    } catch (e) {
+      setSaldoErr(e.message);
+    } finally {
+      setSaldoSaving(false);
+    }
+  };
+
   const pieData = useMemo(() => {
   const map = {};
   transaksiBulanIni.filter((t) => t.jenis === pieJenis).forEach((t) => {
@@ -136,10 +174,64 @@ function Ringkasan({ curMonth, setCurMonth }) {
 
       {loadErr && <div className="form-error" style={{ marginBottom: 12 }}>{loadErr}</div>}
 
+      <div className="saldo-awal-row">
+        <div className="stat-card tone-indigo saldo-awal-card">
+          <div>
+            <div className="stat-label">
+              Saldo Awal{" "}
+              {saldo && <span className="pill pill-indigo">{saldo.saldo_awal_sumber === "manual" ? "Manual" : "Otomatis"}</span>}
+            </div>
+            <div className="stat-value">{rupiah(saldoAwal)}</div>
+            {saldo && saldo.saldo_awal_sumber === "manual" && (
+              <div className="muted">Otomatis dari bulan lalu: {rupiah(saldo.saldo_awal_otomatis)}</div>
+            )}
+          </div>
+          {!editSaldoAwal ? (
+            <button type="button" className="btn-secondary" onClick={() => { setSaldoAwalInput(saldoAwal ? String(saldoAwal) : ""); setSaldoErr(""); setEditSaldoAwal(true); }}>
+              Ubah
+            </button>
+          ) : (
+            <div className="saldo-awal-edit">
+              <input
+                type="number"
+                value={saldoAwalInput}
+                onChange={(e) => setSaldoAwalInput(e.target.value)}
+                className="field"
+                placeholder="0"
+                aria-label="Saldo awal manual"
+              />
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={saldoSaving}
+                onClick={() => {
+                  if (saldoAwalInput.trim() === "" || !Number.isFinite(Number(saldoAwalInput))) {
+                    setSaldoErr("Isi angka dulu, atau pakai tombol Otomatis.");
+                    return;
+                  }
+                  simpanSaldoAwal(Number(saldoAwalInput));
+                }}
+              >
+                {saldoSaving ? "Menyimpan…" : "Simpan"}
+              </button>
+              {saldo && saldo.saldo_awal_sumber === "manual" && (
+                <button type="button" className="btn-secondary" disabled={saldoSaving} onClick={() => simpanSaldoAwal(null)}>
+                  Pakai Otomatis
+                </button>
+              )}
+              <button type="button" className="btn-secondary" disabled={saldoSaving} onClick={() => setEditSaldoAwal(false)}>
+                Batal
+              </button>
+            </div>
+          )}
+        </div>
+        {saldoErr && <div className="form-error" style={{ marginTop: 6 }}>{saldoErr}</div>}
+      </div>
+
       <div className="stat-row">
-        <StatCard label="Pemasukan" value={totalMasuk} tone="green" />
-        <StatCard label="Pengeluaran" value={totalKeluar} tone="rose" />
-        <StatCard label="Saldo Bulan Ini" value={totalMasuk - totalKeluar} tone="teal" />
+        <StatCard label="Pemasukan" value={tampilMasuk} tone="green" />
+        <StatCard label="Pengeluaran" value={tampilKeluar} tone="rose" />
+        <StatCard label="Saldo Akhir" value={saldoAkhir} tone="teal" />
       </div>
 
       <div className="panel-row">

@@ -15,6 +15,17 @@ Google Sheets, parsing & analisis pakai Gemini.
 - Tabel transaksi dengan **filter bulan/kategori, pencarian (deskripsi/kategori/jumlah), sort, pagination**, edit & hapus.
 - Ringkasan bulan berjalan, grafik pie per kategori, grafik tren 6 bulan
   (bar + trendline halus, hijau = pemasukan, merah = pengeluaran).
+- **Saldo Awal terbawa antar-bulan** — saldo akhir bulan lalu otomatis jadi
+  saldo awal bulan berikutnya (dihitung retroaktif dari transaksi pertama):
+  `Saldo Akhir = Saldo Awal + Pemasukan - Pengeluaran`. Saldo Awal tampil
+  sebagai baris tersendiri di atas ringkasan, **tidak** dihitung sebagai
+  pemasukan (tidak masuk total/statistik/grafik pemasukan), dan bisa diubah
+  manual per bulan dari dashboard (tombol "Ubah" di kartu Saldo Awal;
+  kosongkan lewat "Pakai Otomatis" untuk kembali ke hitungan otomatis).
+  Override manual disimpan di tab `Pengaturan` dengan key
+  `saldo_awal_YYYY-MM` — tidak perlu tab baru dan data lama tidak berubah.
+  Logikanya ada di `lib/saldo.js`, testnya di `lib/saldo.test.mjs`
+  (`npm test`).
 - Analisis AI dengan cache (disimpan di sheet `AnalisisCache`, tidak
   digenerate ulang kecuali diminta atau data bulan itu berubah). **Prompt analisis bisa dikustomisasi dari dashboard** (field opsional di tab Analisis AI).
 - **Kategori dinamis** — dikelola lewat tab `Kategori` di spreadsheet, tidak
@@ -96,9 +107,11 @@ app/
     quick-add/route.js          → POST teks bebas dari website (via AI)
     analysis/route.js           → GET cache, POST generate ulang analisis
     categories/route.js         → GET daftar kategori (dari tab Kategori)
+    saldo-awal/route.js         → GET ringkasan saldo bulan, POST override manual saldo awal
     settings/route.js           → GET/POST nama model Gemini (dari tab Pengaturan)
 lib/
   sheets.js      → semua akses baca/tulis Google Sheets (transaksi, kategori, pengaturan, cache analisis)
+  saldo.js       → logika murni Saldo Awal/Akhir per bulan (+ saldo.test.mjs)
   gemini.js      → pemanggilan model Gemini (parsing & analisis), model & kategori dikirim sebagai parameter, bukan hardcode
   auth.js        → sesi JWT untuk PIN
   categories.js  → hanya fallback statis + fungsi validasi kategoriValid()

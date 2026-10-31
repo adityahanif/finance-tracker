@@ -93,6 +93,13 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .month-nav button:hover:not(:disabled) { border-color: var(--green); background: rgba(1,117,21,0.06); }
 .month-nav button:disabled { opacity: 0.35; cursor: not-allowed; }
 
+.saldo-awal-row { margin-bottom: var(--space-md); }
+.saldo-awal-card { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-md); flex-wrap: wrap; }
+.saldo-awal-card .btn-secondary { margin-top: 0; }
+.saldo-awal-edit { display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; }
+.saldo-awal-edit .field { width: 180px; }
+.saldo-awal-edit .btn-secondary { margin-top: 0; }
+
 .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-md); margin-bottom: var(--space-lg); }
 .stat-card {
   background: #fff; border: 1px solid var(--rule); border-left-width: 4px; border-radius: var(--radius-md);

@@ -4,7 +4,9 @@ import {
   appendTransaction, updateTransactionById, deleteTransactionById,
   getAllTransactions, clearCachedAnalysis, monthKeyOf,
   getCategories, getSetting, findIdByPrefix, findTransactionById,
+  getSaldoAwalOverrides,
 } from "../../../lib/sheets";
+import { hitungRingkasanBulan } from "../../../lib/saldo";
 import { kategoriValid } from "../../../lib/categories";
 import { randomUUID } from "crypto";
 
@@ -44,12 +46,12 @@ async function handleRingkasan(chatId) {
     .format(new Date())
     .slice(0, 7);
   const semua = await getAllTransactions();
-  const bulanIni = semua.filter((t) => monthKeyOf(t.tanggal) === bulan);
-  const masuk = bulanIni.filter((t) => t.jenis === "pemasukan").reduce((s, t) => s + t.jumlah, 0);
-  const keluar = bulanIni.filter((t) => t.jenis === "pengeluaran").reduce((s, t) => s + t.jumlah, 0);
+  const overrides = await getSaldoAwalOverrides().catch(() => ({}));
+  // Saldo awal terbawa dari bulan-bulan sebelumnya; bukan pemasukan.
+  const r = hitungRingkasanBulan(semua, overrides, bulan);
   await sendMessage(
     chatId,
-    `Ringkasan bulan ini:\nPemasukan: ${rupiah(masuk)}\nPengeluaran: ${rupiah(keluar)}\nSaldo bersih: ${rupiah(masuk - keluar)}`
+    `Ringkasan bulan ini:\nSaldo Awal: ${rupiah(r.saldo_awal)}\nPemasukan: ${rupiah(r.total_pemasukan)}\nPengeluaran: ${rupiah(r.total_pengeluaran)}\nSaldo Akhir: ${rupiah(r.saldo_akhir)}`
   );
 }
 

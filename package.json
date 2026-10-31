@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "test": "node --test lib/saldo.test.mjs",
     "set-webhook": "node scripts/set-webhook.js"
   },
   "dependencies": {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getAllTransactions, getCachedAnalysis, setCachedAnalysis, monthKeyOf, getSetting } from "../../../lib/sheets";
+import { getAllTransactions, getCachedAnalysis, setCachedAnalysis, monthKeyOf, getSetting, getSaldoAwalOverrides } from "../../../lib/sheets";
 import { generateAnalysis } from "../../../lib/gemini";
+import { hitungRingkasanBulan } from "../../../lib/saldo";
 
 function prevMonthKey(bulan) {
   const [y, m] = bulan.split("-").map(Number);
@@ -23,6 +24,11 @@ async function buildAggregate(bulan) {
   const totalJenis = (mk, jenis) =>
     semua.filter((t) => monthKeyOf(t.tanggal) === mk && t.jenis === jenis).reduce((s, t) => s + t.jumlah, 0);
 
+  // Saldo awal dilaporkan terpisah — total pemasukan di bawah tetap murni
+  // transaksi, saldo awal tidak ikut dijumlahkan ke dalamnya.
+  const overrides = await getSaldoAwalOverrides().catch(() => ({}));
+  const ringkasan = hitungRingkasanBulan(semua, overrides, bulan);
+
   return {
     bulan_berjalan: bulan,
     bulan_sebelumnya: prev,
@@ -30,6 +36,8 @@ async function buildAggregate(bulan) {
     pengeluaran_per_kategori_bulan_sebelumnya: byCategory(prev),
     total_pemasukan_bulan_berjalan: totalJenis(bulan, "pemasukan"),
     total_pengeluaran_bulan_berjalan: totalJenis(bulan, "pengeluaran"),
+    saldo_awal_bulan_berjalan: ringkasan.saldo_awal,
+    saldo_akhir_bulan_berjalan: ringkasan.saldo_akhir,
   };
 }
 
